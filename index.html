@@ -1224,6 +1224,14 @@
               <option value="es">español</option>
             </select>
           </div>
+
+          <div class="setting-item">
+            <div>
+              <div class="setting-label" id="labelPreMiD">Discord presence</div>
+              <div class="setting-description" id="descPreMiD">share playback status with PreMiD</div>
+            </div>
+            <div class="toggle-switch" id="preMiDToggle"></div>
+          </div>
         </div>
 
         <div class="settings-section">
@@ -1646,6 +1654,8 @@ const translations = {
     sectionGeneral: "🌐 general",
     labelLanguage: "language",
     descLanguage: "choose interface language",
+    labelPreMiD: "Discord presence",
+    descPreMiD: "share playback status with PreMiD",
     sectionAppearance: "🎨 appearance",
 
     labelParticles: "particle effects",
@@ -1752,6 +1762,8 @@ const translations = {
     sectionGeneral: "🌐 general",
     labelLanguage: "idioma",
     descLanguage: "elegir idioma de la interfaz",
+    labelPreMiD: "presencia de Discord",
+    descPreMiD: "compartir el estado de reproducción con PreMiD",
     sectionAppearance: "🎨 apariencia",
 
     labelParticles: "efectos de partículas",
@@ -1874,6 +1886,7 @@ let customThemeStyleEl = null;
 
 let settings = {
   language: 'en',
+  preMiD: true,
   particles: false,
   visualizerType: 'bars',
   crossfade: false,
@@ -1969,6 +1982,8 @@ function updateLanguage() {
   document.getElementById('sectionGeneral').textContent = t('sectionGeneral');
   document.getElementById('labelLanguage').textContent = t('labelLanguage');
   document.getElementById('descLanguage').textContent = t('descLanguage');
+  document.getElementById('labelPreMiD').textContent = t('labelPreMiD');
+  document.getElementById('descPreMiD').textContent = t('descPreMiD');
   document.getElementById('sectionAppearance').textContent = t('sectionAppearance');
   document.getElementById('labelParticles').textContent = t('labelParticles');
   document.getElementById('descParticles').textContent = t('descParticles');
@@ -2088,6 +2103,7 @@ function applySettings() {
   visualizer.className = 'visualizer ' + settings.visualizerType;
   
   document.getElementById('particlesToggle').classList.toggle('active', settings.particles);
+  document.getElementById('preMiDToggle').classList.toggle('active', settings.preMiD);
   document.getElementById('crossfadeToggle').classList.toggle('active', settings.crossfade);
   document.getElementById('themeSelect').value = settings.theme || 'purple';
   document.getElementById('themeModeSelect').value = settings.themeMode || 'simple';
@@ -2778,6 +2794,17 @@ document.getElementById('particlesToggle').addEventListener('click', function() 
     particlesEl.classList.remove('active');
   }
   updateParticleControlsUI();
+  saveSettings();
+});
+
+document.getElementById('preMiDToggle').addEventListener('click', function() {
+  settings.preMiD = !settings.preMiD;
+  this.classList.toggle('active', settings.preMiD);
+  if (settings.preMiD) {
+    syncPreMiDState();
+  } else {
+    clearPreMiDState();
+  }
   saveSettings();
 });
 
@@ -3764,7 +3791,23 @@ window.addEventListener('beforeunload', () => {
   for (const k in currentFileUrls) try { URL.revokeObjectURL(currentFileUrls[k]); } catch (e) {}
 });
 
+const preMiDStateKeys = [
+  'ybmp_current_track',
+  'ybmp_current_playlist',
+  'ybmp_is_playing',
+  'ybmp_current_time',
+  'ybmp_duration'
+];
+
+function clearPreMiDState() {
+  try {
+    preMiDStateKeys.forEach(key => localStorage.removeItem(key));
+  } catch (e) {
+  }
+}
+
 function syncPreMiDState() {
+  if (!settings.preMiD) return;
   try {
     const title = (currentIndex >= 0 && currentPlaylist?.files?.[currentIndex])
       ? currentPlaylist.files[currentIndex].name
