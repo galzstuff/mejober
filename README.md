@@ -1,5 +1,3 @@
-# I am starting to rename the whole project to _mejóber_! shouldn't take that long tho
-
 # mejóber
 mejóber is a music player written in html, css &amp; js.
 it uses the indexeddb library to, in a fully offline way, store playlists made by users, where they use an image as a cover, and audio/video files as the content to play.
@@ -33,3 +31,5 @@ i won't maintain this forever due to various reasons, at least, publicly on gith
 visit galzstuff.github.io to know more about other proyects made by (and in general stuff about) me!
 
 cover art credits on demo image 1: https://pinterest.com/Azazelda_dream/
+
+# previously known as _YBMP_ - some mentions to this previous name might still be present in certain parts of the code or other parts (e.g. the ybmp-beta repository).
