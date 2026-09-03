@@ -1,3 +1,5 @@
+# I am starting to rename the whole project to _Mejóber_! shouldn't take that long tho
+
 # ybmp
 your basic music player is a music player written in html, css &amp; js.
 it uses the indexeddb library to, in a fully offline way, store playlists made by users, where they use an image as a cover, and audio/video files as the content to play.
