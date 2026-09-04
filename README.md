@@ -25,7 +25,7 @@ to start, head over to galzstuff.github.io/mejober OR download the index.html fi
 ~~download betas/unstable versions from the releases page under the beta tags or visit galzstuff.github.io/ybmp-beta to access the latest beta w/out losing stuff from the stable version (though it may be updated less than the standard version here)~~ head over to https://github.com/galzstuff/ybmp-beta to download a beta html (or whatever other thing i am experimenting on thats compatible with the player) or https://galzstuff.github.io/ybmp-beta (even tho all contents may and/or will be less stable as on here - your choice, tho'!)
 
 ## oh yea, & please note:
-i won't maintain this forever due to various reasons, at least, publicly on github, this could be considered as a sort of experiment. however, you may modify the code at your liking (fork the code or suggest me stuff to add) (thanks, *The Unlicence*!) and idk just do whatever you wish with it. *once it is considered your stuff, your rules shall be applied.*
+i won't maintain this forever due to various reasons, at least, publicly on github, this could be considered as a sort of experiment. however, you may modify the code at your liking (fork the code or suggest me stuff to add) (thanks, *The Unlicence*!) and idk just do whatever you wish with it.
 
 ### like this?
 visit galzstuff.github.io to know more about other proyects made by (and in general stuff about) me!
