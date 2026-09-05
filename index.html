@@ -92,7 +92,7 @@
     
     /* end of particle stuff */
 
-    /* container settings... i should probably change these */
+    /* container settings... i (and you, if using the advanced css theme editor) should probably change these */
     .container {
       max-width: 1400px;
       margin: 0 auto;
@@ -410,17 +410,80 @@
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 20px;
-      align-items: start;
+      align-items: stretch;
       min-width: 0;
+      min-height: 0;
     }
+
+    .view-switcher {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      background: var(--bg-primary);
+      border-radius: 10px;
+    }
+    .view-switcher button {
+      padding: 6px 10px;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .view-switcher button.active {
+      background: var(--accent);
+      color: var(--text-inverse);
+    }
+    .lyrics-panel {
+      display: none;
+      max-height: 400px;
+      overflow-y: auto;
+      text-align: center;
+      padding: 20px 12px;
+      color: var(--text-secondary);
+    }
+    .lyrics-panel.active {
+      display: block;
+    }
+    .lyrics-line {
+      padding: 8px 4px;
+      font-size: 16px;
+      transition: color 0.2s ease, transform 0.2s ease;
+    }
+    .lyrics-line.active {
+      color: var(--accent);
+      transform: scale(1.04);
+      font-weight: 700;
+    }
+
     .main-grid.side-playlist .player-container > .card:first-child,
     .main-grid.side-playlist .player-container > .card:last-child {
       min-width: 0;
       min-height: 0;
+      height: 100%;
       width: 100%;
       max-width: none;
       overflow: hidden;
     }
+
+    .main-grid.side-playlist .player-container > .card:last-child {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .main-grid.side-playlist .player-container > .card:last-child .track-list,
+    .main-grid.side-playlist .player-container > .card:last-child .lyrics-panel.active {
+      flex: 1;
+      min-height: 0;
+      max-height: none;
+    }
+
+    .main-grid.side-playlist .player-container > .card:last-child .track-list {
+      overflow-y: auto;
+    }
+
     @media (max-width: 900px) {
       .main-grid.side-playlist {
         flex-direction: column;
@@ -433,6 +496,8 @@
         min-width: 0;
         max-width: none;
         width: 100%;
+        height: auto;
+        display: block;
       }
     }
     
@@ -1010,6 +1075,10 @@
       overflow-y: auto;
       padding-right: 8px;
     }
+
+    .track-list.lyrics-hidden {
+      display: none;
+    }
     
     .track-list::-webkit-scrollbar {
       width: 6px;
@@ -1555,6 +1624,22 @@
         </div>
       </div>
     </div>
+    <div class="modal-overlay" id="lyricsModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title" id="lyricsModalTitle">edit lyrics</h2>
+          <button class="modal-close" id="closeLyricsModal">✕</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="lyricsModalLabel">lyrics</label>
+          <textarea id="lyricsEditor" class="input" rows="14" placeholder="[00:12.50] lyric line"></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:12px; padding-top:12px;">
+          <button class="btn btn-secondary btn-small" id="cancelLyricsBtn">cancel</button>
+          <button class="btn btn-primary btn-small" id="saveLyricsBtn">save</button>
+        </div>
+      </div>
+    </div>
 
     <div class="main-grid">
       <div class="player-container">
@@ -1611,7 +1696,13 @@
         <div class="card reveal-section">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <div class="card-title" style="margin: 0;" id="titleTracks">tracks</div>
-            <span id="trackCount" style="color: var(--text-secondary); font-size: 13px;">&nbsp;</span>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div class="view-switcher" role="tablist">
+                <button id="tracksViewBtn" class="active" type="button">tracks</button>
+                <button id="lyricsViewBtn" type="button">lyrics</button>
+              </div>
+              <span id="trackCount" style="color: var(--text-secondary); font-size: 13px;">&nbsp;</span>
+            </div>
           </div>
           
           <div class="search-box">
@@ -1620,6 +1711,7 @@
           </div>
           
           <div id="playlist" class="track-list"></div>
+          <div id="lyricsPanel" class="lyrics-panel"></div>
         </div>
       </div>
 
@@ -1658,6 +1750,7 @@
   </div>
 
 <script>
+/* localization strings for english and spanish */
 const translations = {
   en: {
     appTitle: "mejóber",
@@ -1745,6 +1838,13 @@ const translations = {
     btnCancel: "cancel",
     btnCleanup: "cleanup",
     titleTracks: "tracks",
+    titleLyrics: "lyrics",
+    btnLyrics: "lyrics",
+    btnImportLyrics: "import lyrics",
+    btnEditLyrics: "edit lyrics",
+    lyricsEmpty: "no lyrics for this song",
+    lyricsEditorPlaceholder: "[00:12.50] lyric line",
+    lyricsImported: "lyrics imported",
     placeholderSearch: "search songs...",
     selectPlaylist: "select a playlist",
     selectTrack: "select a track",
@@ -1853,6 +1953,13 @@ const translations = {
     btnCancel: "cancelar",
     btnCleanup: "limpiar",
     titleTracks: "pistas",
+    titleLyrics: "letras",
+    btnLyrics: "letras",
+    btnImportLyrics: "importar letras",
+    btnEditLyrics: "editar letras",
+    lyricsEmpty: "no hay letras para esta canción",
+    lyricsEditorPlaceholder: "[00:12.50] línea de letra",
+    lyricsImported: "letras importadas",
     placeholderSearch: "buscar canciones...",
     selectPlaylist: "selecciona una lista",
     selectTrack: "selecciona una pista",
@@ -1877,6 +1984,7 @@ const translations = {
   }
 };
 
+/* indexeddb configuration and global state */
 const DB_NAME = 'YBMP_DB_v2';
 const DB_VERSION = 2;
 let db;
@@ -1940,6 +2048,7 @@ let settings = {
   playlistSide: false
 };
 
+/* default color themes */
 const themePresets = {
   purple: {
     accent: '#6366f1',
@@ -1979,6 +2088,7 @@ const themePresets = {
   }
 };
 
+/* localization helper - translates keys with optional replacements */
 function t(key, replacements = {}) {
   let text = translations[settings.language][key] || translations.en[key] || key;
   Object.keys(replacements).forEach(k => {
@@ -1987,6 +2097,7 @@ function t(key, replacements = {}) {
   return text;
 }
 
+/* updates all ui text based on current language setting */
 function updateLanguage() {
   document.getElementById('appTitle').textContent = t('appTitle');
   document.getElementById('appSubtitle').textContent = t('appSubtitle');
@@ -2073,6 +2184,13 @@ function updateLanguage() {
   document.getElementById('cancelEditBtn').textContent = t('btnCancel');
   document.getElementById('cleanupBtn').textContent = t('btnCleanup');
   document.getElementById('titleTracks').textContent = t('titleTracks');
+  document.getElementById('tracksViewBtn').textContent = t('titleTracks');
+  document.getElementById('lyricsViewBtn').textContent = t('titleLyrics');
+  document.getElementById('lyricsModalTitle').textContent = t('btnEditLyrics');
+  document.getElementById('lyricsModalLabel').textContent = t('titleLyrics');
+  document.getElementById('lyricsEditor').placeholder = t('lyricsEditorPlaceholder');
+  document.getElementById('cancelLyricsBtn').textContent = t('btnCancel');
+  document.getElementById('saveLyricsBtn').textContent = t('btnSave');
   document.getElementById('searchInput').placeholder = t('placeholderSearch');
   document.getElementById('stopBtn').title = t('stop');
   
@@ -2084,6 +2202,7 @@ function updateLanguage() {
   renderPlaylist();
 }
 
+/* settings management - load from localstorage */
 function loadSettings() {
   const saved = localStorage.getItem('ybmp_settings');
   if (saved) {
@@ -2096,10 +2215,12 @@ function loadSettings() {
   updateLanguage();
 }
 
+/* save current settings to localstorage */
 function saveSettings() {
   localStorage.setItem('ybmp_settings', JSON.stringify(settings));
 }
 
+/* apply settings to the ui (particles, theme, visualizer, etc) */
 function applySettings() {
   const particlesEl = document.getElementById('particles');
   if (settings.particles) {
@@ -2122,7 +2243,7 @@ function applySettings() {
   document.getElementById('visualizerType').value = settings.visualizerType;
   document.getElementById('languageSelect').value = settings.language;
   const advancedCssEditorEl = document.getElementById('advancedCssEditor');
-  if (settings.themeMode === 'advanced' && (!settings.customCss || !settings.customCss.includes('Advanced theme editor') || !settings.customCss.includes(':root'))) {
+  if (settings.themeMode === 'advanced' && !settings.customCss) {
     settings.customCss = buildAdvancedCssTemplate();
   }
   if (advancedCssEditorEl) {
@@ -2147,6 +2268,7 @@ function applySettings() {
 
   applyThemeColors();
   
+  /* update keyboard shortcut displays */
   document.getElementById('key-playpause').value = settings.keymap.playpause === ' ' ? t('keySpace') : settings.keymap.playpause;
   document.getElementById('key-prev').value = settings.keymap.prev;
   document.getElementById('key-next').value = settings.keymap.next;
@@ -2161,6 +2283,78 @@ function applySettings() {
   if (toggleKeyMute) toggleKeyMute.checked = settings.keymapEnabled.mute;
 }
 
+/* parse timestamped LRC lines into sorted lyric entries */
+function parseLyrics(raw) {
+  return raw.split(/\r?\n/).flatMap(line => {
+    const matches = [...line.matchAll(/\[(\d+):(\d{1,2})(?:\.(\d{1,3}))?\]/g)];
+    const text = line.replace(/(?:\[\d+:\d{1,2}(?:\.\d{1,3})?\])+/, '').trim();
+    return matches.map(match => ({
+      time: Number(match[1]) * 60 + Number(match[2]) + Number(`0.${match[3] || '0'}`),
+      text
+    }));
+  }).filter(line => line.text).sort((a, b) => a.time - b.time);
+}
+
+/* render the current song's lyrics and highlight the active line */
+function renderLyrics(currentTime = audio.currentTime || 0) {
+  if (!lyricsPanel) return;
+  lyricsAutoScroll = true;
+  lastLyricsActiveIndex = -2;
+  const lines = currentPlaylist?.files?.[currentIndex]?.lyrics?.lines || [];
+  lyricsPanel.innerHTML = '';
+  if (!lines.length) {
+    lyricsPanel.textContent = t('lyricsEmpty');
+    return;
+  }
+  lines.forEach((line, index) => {
+    const element = document.createElement('div');
+    element.className = 'lyrics-line';
+    element.dataset.index = index;
+    element.textContent = line.text;
+    lyricsPanel.appendChild(element);
+  });
+  updateLyrics(currentTime);
+}
+
+function updateLyrics(currentTime) {
+  if (!lyricsPanel) return;
+  const lines = currentPlaylist?.files?.[currentIndex]?.lyrics?.lines || [];
+  let activeIndex = -1;
+  lines.forEach((line, index) => {
+    if (line.time <= currentTime) activeIndex = index;
+  });
+  const activeLineChanged = activeIndex !== lastLyricsActiveIndex;
+  lastLyricsActiveIndex = activeIndex;
+  lyricsPanel.querySelectorAll('.lyrics-line').forEach((line, index) => {
+    line.classList.toggle('active', index === activeIndex);
+  });
+  const activeLine = lyricsPanel.querySelector('.lyrics-line.active');
+  if (activeLine && activeLineChanged && lyricsPanel.classList.contains('active')) {
+    const panelRect = lyricsPanel.getBoundingClientRect();
+    const lineRect = activeLine.getBoundingClientRect();
+    const lineTop = lyricsPanel.scrollTop + lineRect.top - panelRect.top;
+    const targetScrollTop = lineTop - (lyricsPanel.clientHeight - activeLine.offsetHeight) / 2;
+    lyricsPanel.scrollTo({
+      top: Math.max(0, targetScrollTop),
+      behavior: 'smooth'
+    });
+  }
+}
+
+function setTrackView(view) {
+  const showingLyrics = view === 'lyrics';
+  playlistEl.classList.toggle('lyrics-hidden', showingLyrics);
+  searchInput.parentElement.style.display = showingLyrics ? 'none' : '';
+  lyricsPanel.classList.toggle('active', showingLyrics);
+  tracksViewBtn.classList.toggle('active', !showingLyrics);
+  lyricsViewBtn.classList.toggle('active', showingLyrics);
+  if (showingLyrics) {
+    lyricsAutoScroll = true;
+    renderLyrics();
+  }
+}
+
+/* dom references for playlist creation and editing */
 const newName = document.getElementById('newName');
 const newCover = document.getElementById('newCover');
 const newFiles = document.getElementById('newFiles');
@@ -2176,6 +2370,7 @@ const saveEditBtn = document.getElementById('saveEditBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 const cleanupBtn = document.getElementById('cleanupBtn');
 
+/* dom references for player display and controls */
 const coverImg = document.getElementById('coverImg');
 const nowTitle = document.getElementById('nowTitle');
 const nowMeta = document.getElementById('nowMeta');
@@ -2187,12 +2382,14 @@ const shuffleBtn = document.getElementById('shuffleBtn');
 const repeatOneBtn = document.getElementById('repeatOneBtn');
 const loopListBtn = document.getElementById('loopListBtn');
 
+/* dom references for playlist and track display */
 const playlistEl = document.getElementById('playlist');
 const trackCount = document.getElementById('trackCount');
 const seek = document.getElementById('seek');
 const curTime = document.getElementById('curTime');
 const durTime = document.getElementById('durTime');
 
+/* dom references for volume and playback speed controls */
 const volumeSlider = document.getElementById('volumeSlider');
 const volumeValue = document.getElementById('volumeValue');
 const volumeIcon = document.getElementById('volumeIcon');
@@ -2200,11 +2397,24 @@ const speedSlider = document.getElementById('speedSlider');
 const speedValue = document.getElementById('speedValue');
 const searchInput = document.getElementById('searchInput');
 const visualizer = document.getElementById('visualizer');
+const lyricsPanel = document.getElementById('lyricsPanel');
+const tracksViewBtn = document.getElementById('tracksViewBtn');
+const lyricsViewBtn = document.getElementById('lyricsViewBtn');
+const lyricsModal = document.getElementById('lyricsModal');
+const lyricsEditor = document.getElementById('lyricsEditor');
+const closeLyricsModal = document.getElementById('closeLyricsModal');
+const cancelLyricsBtn = document.getElementById('cancelLyricsBtn');
+const saveLyricsBtn = document.getElementById('saveLyricsBtn');
+let editingLyricsIndex = -1;
+let lyricsAutoScroll = true;
+let lastLyricsActiveIndex = -2;
 
+/* dom references for settings modal and buttons */
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsModal = document.getElementById('settingsModal');
 const closeSettings = document.getElementById('closeSettings');
 
+/* settings cog spin animation */
 settingsBtn.addEventListener('mouseenter', () => {
   settingsBtn.style.animation = 'cogSpin 0.3s ease forwards';
 });
@@ -2221,12 +2431,14 @@ closeSettings.addEventListener('click', () => {
   settingsModal.classList.remove('show');
 });
 
+/* close settings modal when clicking outside */
 settingsModal.addEventListener('click', (e) => {
   if (e.target === settingsModal) {
     settingsModal.classList.remove('show');
   }
 });
 
+/* dom references for playlist creation modal */
 const playlistModal = document.getElementById('playlistModal');
 const openPlaylistModal = document.getElementById('openPlaylistModal');
 const closePlaylistModal = document.getElementById('closePlaylistModal');
@@ -2266,6 +2478,55 @@ const renameConfirmBtn = document.getElementById('renameConfirmBtn');
 const renameCancelBtn = document.getElementById('renameCancelBtn');
 const closeRenameModal = document.getElementById('closeRenameModal');
 
+tracksViewBtn.addEventListener('click', () => setTrackView('tracks'));
+lyricsViewBtn.addEventListener('click', () => setTrackView('lyrics'));
+
+function openLyricsEditor(index, raw = '') {
+  editingLyricsIndex = index;
+  lyricsEditor.value = raw;
+  lyricsModal.classList.add('show');
+  lyricsEditor.focus();
+}
+
+function closeLyricsEditor() {
+  lyricsModal.classList.remove('show');
+  editingLyricsIndex = -1;
+}
+
+closeLyricsModal.addEventListener('click', closeLyricsEditor);
+cancelLyricsBtn.addEventListener('click', closeLyricsEditor);
+lyricsModal.addEventListener('click', event => {
+  if (event.target === lyricsModal) closeLyricsEditor();
+});
+
+saveLyricsBtn.addEventListener('click', async () => {
+  if (!currentPlaylist || editingLyricsIndex < 0) return;
+  const raw = lyricsEditor.value.trim();
+  const lines = parseLyrics(raw);
+  currentPlaylist.files[editingLyricsIndex].lyrics = raw ? { raw, lines } : null;
+  await idbPut('playlists', currentPlaylist);
+  renderPlaylist();
+  renderLyrics();
+  closeLyricsEditor();
+});
+
+async function importLyrics(index) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.lrc,text/plain';
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    const raw = await file.text();
+    currentPlaylist.files[index].lyrics = { raw, lines: parseLyrics(raw) };
+    await idbPut('playlists', currentPlaylist);
+    renderPlaylist();
+    if (index === currentIndex) renderLyrics();
+  };
+  input.click();
+}
+
+/* confirmation dialog helper */
 function showConfirm(message) {
   return new Promise(resolve => {
     confirmModalMessage.textContent = message;
@@ -2440,6 +2701,28 @@ body {
   color: white;
 }
 
+.view-switcher {
+  background: var(--bg-primary);
+}
+
+.view-switcher button {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.view-switcher button.active {
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+
+.lyrics-panel {
+  color: var(--text-secondary);
+}
+
+.lyrics-line.active {
+  color: var(--accent);
+}
+
 .modal,
 .card,
 .edit-panel {
@@ -2466,6 +2749,7 @@ textarea {
 }`;
 }
 
+/* sync advanced css editor with current color settings */
 function syncAdvancedCssWithColors() {
   const palette = settings.colors || {};
   const accent = palette.accent || '#6366f1';
@@ -2479,11 +2763,7 @@ function syncAdvancedCssWithColors() {
   const textSecondary = palette.textSecondary || '#94a3b8';
 
   const baseCss = settings.customCss || buildAdvancedCssTemplate();
-  if (!baseCss.includes('Advanced theme editor') || !baseCss.includes(':root')) {
-    settings.customCss = buildAdvancedCssTemplate();
-    if (advancedCssEditor) advancedCssEditor.value = settings.customCss;
-    return settings.customCss;
-  }
+  if (!settings.customCss) settings.customCss = baseCss;
 
   let nextCss = baseCss;
   const replacements = [
@@ -2515,6 +2795,7 @@ function syncAdvancedCssWithColors() {
   return settings.customCss;
 }
 
+/* show/hide theme customization controls based on selection */
 function updateThemeCustomizationUI() {
   const panel = document.getElementById('themeCustomizationControls');
   const simpleThemeControls = document.getElementById('simpleThemeControls');
@@ -2526,6 +2807,7 @@ function updateThemeCustomizationUI() {
   if (advancedThemeControls) advancedThemeControls.style.display = isCustom && useAdvanced ? '' : 'none';
 }
 
+/* apply css color variables based on current settings */
 function applyThemeColors() {
   const colors = settings.theme && themePresets[settings.theme]
     ? themePresets[settings.theme]
@@ -2540,11 +2822,16 @@ function applyThemeColors() {
     document.head.appendChild(customThemeStyleEl);
   }
   if (settings.theme === 'custom' && settings.themeMode === 'advanced') {
-    syncAdvancedCssWithColors();
+    if (!settings.customCss) settings.customCss = buildAdvancedCssTemplate();
     customThemeStyleEl.textContent = settings.customCss || '';
+    const root = document.documentElement;
+    ['--accent', '--accent-end', '--accent-hover', '--accent-light', '--accent-shadow', '--accent-overlay', '--particle-color', '--bg-primary', '--bg-secondary', '--bg-tertiary', '--text-primary', '--text-secondary'].forEach(name => {
+      root.style.removeProperty(name);
+    });
   } else {
     customThemeStyleEl.textContent = '';
   }
+  if (settings.theme === 'custom' && settings.themeMode === 'advanced') return;
   const root = document.documentElement;
   root.style.setProperty('--accent', colors.accent);
   root.style.setProperty('--accent-end', colors.accent);
@@ -2560,12 +2847,14 @@ function applyThemeColors() {
   root.style.setProperty('--text-secondary', colors.textSecondary);
 }
 
+/* load theme slot options from indexeddb */
 async function loadThemeSlots() {
   if (!db) return;
   themeSlots = await idbGetAll('themes');
   renderThemeSlotOptions();
 }
 
+/* populate theme slot dropdown */
 function renderThemeSlotOptions() {
   const select = document.getElementById('themeSlotSelect');
   if (!select) return;
@@ -2583,6 +2872,7 @@ function renderThemeSlotOptions() {
   }
 }
 
+/* load a saved theme slot */
 async function loadThemeSlot(slotId) {
   if (!slotId) return;
   const slot = themeSlots.find(s => s.id === slotId);
@@ -2602,6 +2892,7 @@ async function loadThemeSlot(slotId) {
   saveSettings();
 }
 
+/* save current theme settings to a slot */
 async function saveThemeSlot() {
   const slotId = document.getElementById('themeSlotSelect').value;
   if (!slotId) return;
@@ -2707,10 +2998,8 @@ if (themeModeSelect) {
     settings.theme = 'custom';
     settings.themeSlot = null;
     if (this.value === 'advanced') {
-      if (!settings.customCss || !settings.customCss.includes('Advanced theme editor') || !settings.customCss.includes(':root')) {
+      if (!settings.customCss) {
         settings.customCss = buildAdvancedCssTemplate();
-      } else {
-        syncAdvancedCssWithColors();
       }
       if (advancedCssEditor) advancedCssEditor.value = settings.customCss;
     }
@@ -2778,6 +3067,7 @@ if (saveThemeSlotBtn) {
 }
 
 if (particleCountInput && particleCountValue) {
+  /* adjust particle count */
   particleCountInput.addEventListener('input', function() {
     const val = Number(this.value) || 0;
     settings.particleCount = val;
@@ -2790,6 +3080,7 @@ if (particleCountInput && particleCountValue) {
 }
 
 if (particleSizeInput && particleSizeValue) {
+  /* adjust particle size */
   particleSizeInput.addEventListener('input', function() {
     const val = Number(this.value) || 1;
     settings.particleSize = val;
@@ -2801,6 +3092,7 @@ if (particleSizeInput && particleSizeValue) {
   });
 }
 
+/* toggle particle effects */
 document.getElementById('particlesToggle').addEventListener('click', function() {
   settings.particles = !settings.particles;
   this.classList.toggle('active', settings.particles);
@@ -2817,6 +3109,7 @@ document.getElementById('particlesToggle').addEventListener('click', function() 
   saveSettings();
 });
 
+/* toggle premid discord presence syncing */
 document.getElementById('preMiDToggle').addEventListener('click', function() {
   settings.preMiD = !settings.preMiD;
   this.classList.toggle('active', settings.preMiD);
@@ -2828,12 +3121,14 @@ document.getElementById('preMiDToggle').addEventListener('click', function() {
   saveSettings();
 });
 
+/* toggle crossfade between tracks */
 document.getElementById('crossfadeToggle').addEventListener('click', function() {
   settings.crossfade = !settings.crossfade;
   this.classList.toggle('active', settings.crossfade);
   saveSettings();
 });
 
+/* toggle header title visibility */
 document.getElementById('hideTitleToggle').addEventListener('click', function() {
   settings.hideTitle = !settings.hideTitle;
   this.classList.toggle('active', settings.hideTitle);
@@ -2841,6 +3136,7 @@ document.getElementById('hideTitleToggle').addEventListener('click', function() 
   saveSettings();
 });
 
+/* toggle header subtitle visibility */
 document.getElementById('hideSubtitleToggle').addEventListener('click', function() {
   settings.hideSubtitle = !settings.hideSubtitle;
   this.classList.toggle('active', settings.hideSubtitle);
@@ -2848,6 +3144,7 @@ document.getElementById('hideSubtitleToggle').addEventListener('click', function
   saveSettings();
 });
 
+/* change audio visualizer style */
 document.getElementById('visualizerType').addEventListener('change', function() {
   settings.visualizerType = this.value;
   visualizer.className = 'visualizer ' + settings.visualizerType;
@@ -2869,14 +3166,47 @@ function updateParticleControlsUI() {
 
 function applyPlaylistLayout() {
   const grid = document.querySelector('.main-grid');
+  const tracksCard = document.querySelector('.player-container > .card:last-child');
   if (!grid) return;
+  if (tracksCard) tracksCard.style.height = '';
   if (settings.playlistSide) {
     grid.classList.add('side-playlist');
   } else {
     grid.classList.remove('side-playlist');
   }
+  syncSidePlaylistHeight();
 }
 
+function syncSidePlaylistHeight() {
+  const grid = document.querySelector('.main-grid');
+  const playerContainer = document.querySelector('.player-container');
+  const playerCard = playerContainer?.querySelector(':scope > .card:first-child');
+  const tracksCard = playerContainer?.querySelector(':scope > .card:last-child');
+  if (!grid || !playerCard || !tracksCard) return;
+  if (grid.classList.contains('side-playlist') && window.innerWidth > 900) {
+    tracksCard.style.height = `${playerCard.offsetHeight}px`;
+  } else {
+    tracksCard.style.height = '';
+  }
+}
+
+let sidePlaylistResizeObserver = null;
+let observedPlayerCard = null;
+
+function observePlayerCardSize() {
+  const playerCard = document.querySelector('.player-container > .card:first-child');
+  if (!playerCard || !window.ResizeObserver || playerCard === observedPlayerCard) return;
+  sidePlaylistResizeObserver?.disconnect();
+  sidePlaylistResizeObserver = new ResizeObserver(syncSidePlaylistHeight);
+  sidePlaylistResizeObserver.observe(playerCard);
+  observedPlayerCard = playerCard;
+}
+
+window.addEventListener('resize', syncSidePlaylistHeight);
+window.addEventListener('resize', observePlayerCardSize);
+observePlayerCardSize();
+
+/* toggle playlist side-by-side layout */
 document.getElementById('playlistSideToggle').addEventListener('click', function() {
   settings.playlistSide = !settings.playlistSide;
   this.classList.toggle('active', settings.playlistSide);
@@ -2886,6 +3216,7 @@ document.getElementById('playlistSideToggle').addEventListener('click', function
 
 let recordingKey = null;
 
+/* setup keyboard shortcut recording for a key */
 function setupKeymapInput(id, setting) {
   const input = document.getElementById(id);
   input.addEventListener('click', () => {
@@ -2905,6 +3236,7 @@ setupKeymapInput('key-volup', 'volup');
 setupKeymapInput('key-voldown', 'voldown');
 setupKeymapInput('key-mute', 'mute');
 
+/* enable/disable individual keyboard shortcuts */
 if (toggleKeyPlaypause) toggleKeyPlaypause.addEventListener('change', () => { settings.keymapEnabled.playpause = toggleKeyPlaypause.checked; saveSettings(); });
 if (toggleKeyPrev) toggleKeyPrev.addEventListener('change', () => { settings.keymapEnabled.prev = toggleKeyPrev.checked; saveSettings(); });
 if (toggleKeyNext) toggleKeyNext.addEventListener('change', () => { settings.keymapEnabled.next = toggleKeyNext.checked; saveSettings(); });
@@ -2912,6 +3244,7 @@ if (toggleKeyVolUp) toggleKeyVolUp.addEventListener('change', () => { settings.k
 if (toggleKeyVolDown) toggleKeyVolDown.addEventListener('change', () => { settings.keymapEnabled.voldown = toggleKeyVolDown.checked; saveSettings(); });
 if (toggleKeyMute) toggleKeyMute.addEventListener('change', () => { settings.keymapEnabled.mute = toggleKeyMute.checked; saveSettings(); });
 
+/* global keyboard event handler for shortcuts */
 document.addEventListener('keydown', (e) => {
   if (recordingKey) {
     e.preventDefault();
@@ -2962,6 +3295,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+/* reset all settings to defaults */
 document.getElementById('resetSettings').addEventListener('click', async () => {
   const confirmed = await showConfirm(t('confirmResetSettings'));
   if (!confirmed) return;
@@ -2992,6 +3326,7 @@ document.getElementById('resetSettings').addEventListener('click', async () => {
   }
 });
 
+/* create floating particle background */
 function createParticles() {
   const particlesEl = document.getElementById('particles');
   particlesEl.innerHTML = '';
@@ -3020,6 +3355,7 @@ speedSlider.addEventListener('input', () => {
   speedValue.textContent = speed.toFixed(2) + 'x';
 });
 
+/* initialize indexed database for local storage */
 function openDB(){
   return new Promise((res,rej)=>{
     const rq = indexedDB.open(DB_NAME, DB_VERSION);
@@ -3033,11 +3369,18 @@ function openDB(){
     rq.onerror = e => rej(e);
   });
 }
+
+/* idb wrapper functions - put object in store */
 function idbPut(store,obj){ return new Promise((res,rej)=>{ const tx=db.transaction(store,'readwrite'); const rq=tx.objectStore(store).put(obj); rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); }); }
+
+/* idb wrapper functions - get object from store */
 function idbGet(store,key){ return new Promise((res,rej)=>{ const tx=db.transaction(store,'readonly'); const rq=tx.objectStore(store).get(key); rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); }); }
+/* idb wrapper functions - get all objects from store */
 function idbGetAll(store){ return new Promise((res,rej)=>{ const tx=db.transaction(store,'readonly'); const rq=tx.objectStore(store).getAll(); rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); }); }
+/* idb wrapper functions - delete object from store */
 function idbDel(store,key){ return new Promise((res,rej)=>{ const tx=db.transaction(store,'readwrite'); const rq=tx.objectStore(store).delete(key); rq.onsuccess=()=>res(); rq.onerror=()=>rej(rq.error); }); }
 
+/* setup web audio context for visualizer */
 function initAudioContext() {
   if (audioContext) return;
   
@@ -3089,6 +3432,7 @@ function updateVisualizer() {
   });
 }
 
+/* update media controls and metadata display */
 function updateMediaSession(title, artist, artwork) {
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -3114,6 +3458,7 @@ volumeSlider.addEventListener('input', () => {
   updateVolumeIcon(volume);
 });
 
+/* mute/unmute toggle */
 volumeIcon.addEventListener('click', () => {
   if (audio.volume > 0) {
     audio.dataset.previousVolume = audio.volume;
@@ -3140,6 +3485,7 @@ function updateVolumeIcon(volume) {
   }
 }
 
+/* search and filter tracks */
 searchInput.addEventListener('input', (e) => {
   const query = e.target.value.toLowerCase().trim();
   const tracks = playlistEl.querySelectorAll('.track');
@@ -3181,6 +3527,7 @@ function initScrollReveal() {
   revealElements.forEach(el => observer.observe(el));
 }
 
+/* render all playlists in the sidebar */
 function renderLists(){
   listsContainer.innerHTML='';
   playlists.forEach(pl=>{
@@ -3280,9 +3627,11 @@ createBtn.addEventListener('click', async () => {
   renderLists();
   await loadCover(pl.coverId);
   renderPlaylist();
+  renderLyrics();
   playIndex(currentIndex);
 });
 
+/* load a playlist by id */
 async function loadPlaylist(id, autoplay = false) {
   const pl = await idbGet('playlists', id);
   if (!pl) {
@@ -3304,6 +3653,7 @@ async function loadPlaylist(id, autoplay = false) {
   return pl;
 }
 
+/* load and display the cover image for current playlist */
 async function loadCover(coverId) {
   if (!coverId) {
     coverImg.src = '';
@@ -3318,6 +3668,7 @@ async function loadCover(coverId) {
   }
 }
 
+/* render all tracks in the playlist */
 function renderPlaylist() {
   playlistEl.innerHTML = '';
   const files = currentPlaylist?.files || [];
@@ -3370,6 +3721,24 @@ function renderPlaylist() {
       await idbPut('playlists', currentPlaylist);
       renderPlaylist();
     };
+
+    const importLyricsBtn = document.createElement('button');
+    importLyricsBtn.className = 'btn btn-secondary btn-small';
+    importLyricsBtn.textContent = '📄';
+    importLyricsBtn.title = t('btnImportLyrics');
+    importLyricsBtn.onclick = (e) => {
+      e.stopPropagation();
+      importLyrics(i);
+    };
+
+    const editLyricsBtn = document.createElement('button');
+    editLyricsBtn.className = 'btn btn-secondary btn-small';
+    editLyricsBtn.textContent = '🎼';
+    editLyricsBtn.title = t('btnEditLyrics');
+    editLyricsBtn.onclick = (e) => {
+      e.stopPropagation();
+      openLyricsEditor(i, f.lyrics?.raw || '');
+    };
     
     const removeBtn = document.createElement('button');
     removeBtn.className = 'btn btn-danger btn-small';
@@ -3403,6 +3772,8 @@ function renderPlaylist() {
     
     acts.appendChild(playNow);
     acts.appendChild(renameBtn);
+    acts.appendChild(importLyricsBtn);
+    acts.appendChild(editLyricsBtn);
     acts.appendChild(removeBtn);
     
     track.appendChild(icon);
@@ -3450,9 +3821,11 @@ function renderPlaylist() {
   });
 }
 
+/* track reordering via drag and drop */
 let fadeOutInterval = null;
 let nextTrackQueued = false;
 
+/* smooth volume fade when approaching end of track (for crossfade) */
 function applyCrossfade() {
   if (!settings.crossfade || !currentPlaylist || currentIndex === -1) return;
   
@@ -3477,6 +3850,7 @@ function applyCrossfade() {
   }
 }
 
+/* play a track by index */
 async function playIndex(i) {
   if (!currentPlaylist || !currentPlaylist.files || !currentPlaylist.files[i]) return;
   const fileRef = currentPlaylist.files[i];
@@ -3517,6 +3891,7 @@ async function playIndex(i) {
   nowTitle.textContent = fileRef.name;
   nowMeta.textContent = fileRecord.type || fileRecord.blob.type || 'unknown';
   renderPlaylist();
+  renderLyrics();
   
   audio.volume = volumeSlider.value / 100;
   audio.playbackRate = speedSlider.value / 100;
@@ -3540,6 +3915,7 @@ async function playIndex(i) {
   }
 }
 
+/* audio progress/time update handler */
 audio.addEventListener('timeupdate', () => {
   if (!isFinite(audio.duration) || audio.duration === 0) {
     seek.max = 0;
@@ -3552,12 +3928,14 @@ audio.addEventListener('timeupdate', () => {
   seek.value = Math.floor(audio.currentTime);
   curTime.textContent = formatTime(audio.currentTime);
   durTime.textContent = formatTime(audio.duration);
+  updateLyrics(audio.currentTime);
   
   if (settings.crossfade) {
     applyCrossfade();
   }
 });
 
+/* audio track ended handler - play next or loop */
 audio.addEventListener('ended', () => {
   if (currentIndex < 0 || !currentPlaylist?.files?.[currentIndex]) {
     audio.pause();
@@ -3591,6 +3969,7 @@ audio.addEventListener('ended', () => {
   playIndex(n);
 });
 
+/* toggle play/pause */
 function togglePlay() {
   if (!audio.src) return;
   if (isPlaying) {
@@ -3604,8 +3983,10 @@ function togglePlay() {
   }
 }
 
+/* play button listener */
 playBtn.addEventListener('click', () => togglePlay());
 
+/* stop and clear current playback */
 function clearCurrentPlayback() {
   audio.pause();
   audio.removeAttribute('src');
@@ -3626,14 +4007,17 @@ function clearCurrentPlayback() {
   seek.value = 0;
   curTime.textContent = '0:00';
   durTime.textContent = '0:00';
+  renderLyrics();
   renderLists();
   renderPlaylist();
 }
 
+/* stop button listener */
 stopBtn.addEventListener('click', () => {
   clearCurrentPlayback();
 });
 
+/* previous track button listener */
 prevBtn.addEventListener('click', () => {
   if (!currentPlaylist) return;
   if (currentIndex <= 0) {
@@ -3644,6 +4028,7 @@ prevBtn.addEventListener('click', () => {
   }
 });
 
+/* next track button listener */
 nextBtn.addEventListener('click', () => {
   if (!currentPlaylist) return;
   if (shuffle) {
@@ -3666,11 +4051,13 @@ nextBtn.addEventListener('click', () => {
   }
 });
 
+/* shuffle button listener */
 shuffleBtn.addEventListener('click', () => {
   shuffle = !shuffle;
   shuffleBtn.classList.toggle('active', shuffle);
 });
 
+/* repeat one button listener */
 repeatOneBtn.addEventListener('click', () => {
   repeatOne = !repeatOne;
   if (repeatOne) {
@@ -3680,6 +4067,7 @@ repeatOneBtn.addEventListener('click', () => {
   repeatOneBtn.classList.toggle('active', repeatOne);
 });
 
+/* loop list button listener */
 loopListBtn.addEventListener('click', () => {
   loopList = !loopList;
   if (loopList) {
@@ -3689,6 +4077,7 @@ loopListBtn.addEventListener('click', () => {
   loopListBtn.classList.toggle('active', loopList);
 });
 
+/* seek/progress bar slider */
 seek.addEventListener('input', () => {
   if (audio.src && !isNaN(seek.value)) audio.currentTime = seek.value;
 });
@@ -3701,6 +4090,7 @@ function formatTime(s) {
   return m + ':' + (sec < 10 ? ('0' + sec) : sec);
 }
 
+/* show playlist edit panel */
 function showEditPanel() {
   if (!currentPlaylist) {
     alert(t('alertSelectFirst'));
@@ -3712,8 +4102,10 @@ function showEditPanel() {
   editFiles.value = '';
 }
 
+/* edit list button listener */
 editListBtn.addEventListener('click', () => showEditPanel());
 
+/* cancel edit panel */
 cancelEditBtn.addEventListener('click', () => {
   editPanel.classList.remove('show');
   editName.value = '';
@@ -3721,6 +4113,7 @@ cancelEditBtn.addEventListener('click', () => {
   editFiles.value = '';
 });
 
+/* save edited playlist */
 saveEditBtn.addEventListener('click', async () => {
   if (!currentPlaylist) return;
   
@@ -3755,6 +4148,7 @@ saveEditBtn.addEventListener('click', async () => {
   editFiles.value = '';
 });
 
+/* delete list button listener */
 deleteListBtn.addEventListener('click', async () => {
   if (!currentPlaylist) return alert(t('alertSelectFirst'));
   const confirmed = await showConfirm(t('confirmDeletePlaylist', { name: currentPlaylist.name }));
@@ -3776,6 +4170,7 @@ deleteListBtn.addEventListener('click', async () => {
   renderPlaylist();
 });
 
+/* cleanup unused files button listener */
 cleanupBtn.addEventListener('click', async () => {
   const confirmed = await showConfirm(t('confirmCleanup'));
   if (!confirmed) return;
@@ -3783,6 +4178,7 @@ cleanupBtn.addEventListener('click', async () => {
   alert(t('alertCleanupComplete'));
 });
 
+/* remove unreferenced files from database */
 async function cleanupFiles() {
   const pls = await idbGetAll('playlists');
   const referenced = new Set();
@@ -3819,6 +4215,7 @@ const preMiDStateKeys = [
   'ybmp_duration'
 ];
 
+/* clear premid state from localstorage */
 function clearPreMiDState() {
   try {
     preMiDStateKeys.forEach(key => localStorage.removeItem(key));
@@ -3826,6 +4223,7 @@ function clearPreMiDState() {
   }
 }
 
+/* sync playback state to localstorage for premid bridge */
 function syncPreMiDState() {
   if (!settings.preMiD) return;
   try {
@@ -3841,6 +4239,7 @@ function syncPreMiDState() {
   }
 }
 
+/* sync premid state on playback events */
 audio.addEventListener('timeupdate', syncPreMiDState);
 audio.addEventListener('play', syncPreMiDState);
 audio.addEventListener('pause', syncPreMiDState);
