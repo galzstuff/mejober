@@ -867,22 +867,27 @@
       box-shadow: 0 0 10px var(--accent-shadow);
     }
     
-    .visualizer.circular {
-      display: grid;
-      grid-template-columns: repeat(16, 1fr);
-      gap: 4px;
-      padding: 10px;
+    .visualizer.centered-bars {
       align-items: center;
-      justify-items: center;
     }
-    
-    .visualizer.circular .visualizer-bar {
+
+    .visualizer.centered-bars .visualizer-bar {
+      max-height: 70px;
+      border-radius: 4px;
+    }
+
+    .visualizer-wave {
       width: 100%;
-      height: 4px;
-      min-height: 4px;
-      border-radius: 2px;
+      height: 100%;
+      overflow: visible;
     }
-    
+
+    .visualizer-wave path {
+      fill: var(--accent);
+      opacity: 0.85;
+      filter: drop-shadow(0 0 5px var(--accent-shadow));
+    }
+
     .track-info h2 {
       font-size: 24px;
       font-weight: 700;
@@ -1063,6 +1068,17 @@
       background: linear-gradient(135deg, var(--accent) 0%, var(--accent-end) 100%);
       color: var(--text-inverse);
       box-shadow: 0 8px 24px var(--accent-shadow);
+    }
+
+    .sleep-timer-control {
+      width: auto;
+      min-width: 52px;
+      padding: 0 10px;
+      font-size: 13px;
+    }
+
+    .sleep-timer-button {
+      display: none;
     }
     
     .control-btn.play:hover {
@@ -1330,8 +1346,9 @@
             </div>
             <select class="select" id="visualizerType">
               <option value="bars">bars</option>
-              <option value="circular">circular</option>
+              <option value="centered-bars">centered bars</option>
               <option value="wave">wave</option>
+              <option value="centered-wave">centered wave</option>
             </select>
           </div>
 
@@ -1469,7 +1486,6 @@
             </div>
             <div style="display:flex; align-items:center; gap:12px; width:100%;">
               <input type="number" class="input" id="particleCountInput" min="0" max="1000" step="1" value="50" style="width:120px;">
-              <span id="particleCountValue">50</span>
             </div>
           </div>
 
@@ -1480,7 +1496,6 @@
             </div>
             <div style="display:flex; align-items:center; gap:12px; width:100%;">
               <input type="number" class="input" id="particleSizeInput" min="1" max="100" step="1" value="3" style="width:120px;">
-              <span id="particleSizeValue">3</span>
             </div>
           </div>
           </div>
@@ -1496,6 +1511,16 @@
               <div class="setting-description" id="descCrossfade">smooth transition between songs (3s)</div>
             </div>
             <div class="toggle-switch" id="crossfadeToggle"></div>
+          </div>
+
+          <div id="crossfadeControls">
+            <div class="setting-item">
+              <div>
+                <div class="setting-label" id="labelCrossfadeDuration">crossfade duration</div>
+                <div class="setting-description" id="descCrossfadeDuration">choose how long the crossfade lasts</div>
+              </div>
+              <input type="number" class="input" id="crossfadeDurationInput" min="1" max="6" step="1" value="3" style="width:120px;">
+            </div>
           </div>
 
 
@@ -1556,7 +1581,7 @@
             💡 click on a shortcut to change it, then press the desired key
           </div>
           <div id="verInfo" style="margin-top: 12px; padding: 12px; background: var(--accent-light); border-radius: 8px; font-size: 12px; color: var(--text-secondary);">
-            you are currently using mejóber v0.6.3 r2.
+            you are currently using mejóber v0.8 beta.
           </div>
         </div>
 
@@ -1689,6 +1714,17 @@
               <button id="nextBtn" class="control-btn" title="next">⏭️</button>
               <button id="repeatOneBtn" class="control-btn" title="repeat one">🔂</button>
               <button id="loopListBtn" class="control-btn" title="loop playlist">🔁</button>
+              <select id="sleepTimerSelect" class="control-btn sleep-timer-control" title="sleep timer" aria-label="sleep timer">
+                <option value="0" data-label="🌙">🌙</option>
+                <option value="300" data-label="5m">5m</option>
+                <option value="600" data-label="10m">10m</option>
+                <option value="900" data-label="15m">15m</option>
+                <option value="1800" data-label="30m">30m</option>
+                <option value="2700" data-label="45m">45m</option>
+                <option value="3600" data-label="60m">60m</option>
+                <option value="5400" data-label="90m">90m</option>
+              </select>
+              <button id="sleepTimerButton" class="control-btn sleep-timer-control sleep-timer-button" type="button" title="sleep timer" aria-label="sleep timer"></button>
             </div>
           </div>
         </div>
@@ -1762,14 +1798,15 @@ const translations = {
     labelPreMiD: "Discord presence",
     descPreMiD: "share playback status with PreMiD",
     sectionAppearance: "🎨 appearance",
-    verInfo: "you are currently using mejóber v0.6.3 r2.",
+    verInfo: "you are currently using mejóber v0.8 beta.",
     labelParticles: "particle effects",
     descParticles: "floating particles in the background",
     labelVisualizer: "visualizer type",
     descVisualizer: "audio visualizer style",
     visualizerBars: "bars",
-    visualizerCircular: "circular",
+    visualizerCenteredBars: "centered bars",
     visualizerWave: "wave",
+    visualizerCenteredWave: "centered wave",
     labelTheme: "theme",
     descTheme: "choose a preset or customize colors",
     themePurple: "purple",
@@ -1807,7 +1844,9 @@ const translations = {
     labelTextSecondary: "text secondary",
     sectionAudio: "🔊 audio",
     labelCrossfade: "crossfade",
-    descCrossfade: "smooth transition between songs (3s)",
+    descCrossfade: "smooth transition between songs ({{seconds}}s)",
+    labelCrossfadeDuration: "crossfade duration",
+    descCrossfadeDuration: "choose how long the crossfade lasts",
     sectionKeyboard: "⌨️ keyboard shortcuts",
     labelKeyPlayPause: "play / pause",
     labelKeyPrev: "previous song",
@@ -1865,7 +1904,8 @@ const translations = {
     promptRename: "new name",
     keySpace: "space",
     pressKey: "press a key...",
-    stop: "stop"
+    stop: "stop",
+    sleepTimer: "sleep timer"
   },
   es: {
     appTitle: "mejóber",
@@ -1877,14 +1917,15 @@ const translations = {
     labelPreMiD: "presencia de Discord",
     descPreMiD: "compartir el estado de reproducción con PreMiD",
     sectionAppearance: "🎨 apariencia",
-    verInfo: "estás usando mejóber v0.6.3 r2.",
+    verInfo: "estás usando mejóber v0.8 beta.",
     labelParticles: "efectos de partículas",
     descParticles: "partículas flotantes en el fondo",
     labelVisualizer: "tipo de visualizador",
     descVisualizer: "estilo del visualizador de audio",
     visualizerBars: "barras",
-    visualizerCircular: "circular",
+    visualizerCenteredBars: "barras centradas",
     visualizerWave: "onda",
+    visualizerCenteredWave: "onda centrada",
     labelTheme: "tema",
     descTheme: "elige un preset o personaliza los colores",
     themePurple: "morado",
@@ -1922,7 +1963,9 @@ const translations = {
     labelTextSecondary: "texto secundario",
     sectionAudio: "🔊 audio",
     labelCrossfade: "fundido cruzado",
-    descCrossfade: "transición suave entre canciones (3s)",
+    descCrossfade: "transición suave entre canciones ({{seconds}}s)",
+    labelCrossfadeDuration: "duración del fundido cruzado",
+    descCrossfadeDuration: "elige cuánto dura el fundido cruzado",
     sectionKeyboard: "⌨️ atajos de teclado",
     labelKeyPlayPause: "play / pausa",
     labelKeyPrev: "canción anterior",
@@ -1980,7 +2023,8 @@ const translations = {
     promptRename: "nuevo nombre",
     keySpace: "espacio",
     pressKey: "presiona una tecla...",
-    stop: "detener"
+    stop: "detener",
+    sleepTimer: "temporizador de apagado"
   }
 };
 
@@ -1995,6 +2039,10 @@ let currentPlaylist = null;
 let currentIndex = -1;
 let audio = new Audio();
 let isPlaying = false;
+let sleepTimerRemaining = 0;
+let sleepTimerDuration = 0;
+let sleepTimerInterval = null;
+let sleepTimerLastTick = 0;
 let shuffle = false, repeatOne = false, loopList = false;
 let currentCoverUrl = null;
 let currentFileUrls = {};
@@ -2010,6 +2058,7 @@ let settings = {
   particles: false,
   visualizerType: 'bars',
   crossfade: false,
+  crossfadeDuration: 3,
   theme: 'purple',
   themeSlot: null,
   themeMode: 'simple',
@@ -2115,8 +2164,9 @@ function updateLanguage() {
   
   const visualizerOptions = document.querySelectorAll('#visualizerType option');
   visualizerOptions[0].textContent = t('visualizerBars');
-  visualizerOptions[1].textContent = t('visualizerCircular');
+  visualizerOptions[1].textContent = t('visualizerCenteredBars');
   visualizerOptions[2].textContent = t('visualizerWave');
+  visualizerOptions[3].textContent = t('visualizerCenteredWave');
   
   document.getElementById('labelTheme').textContent = t('labelTheme');
   document.getElementById('descTheme').textContent = t('descTheme');
@@ -2149,7 +2199,9 @@ function updateLanguage() {
   
   document.getElementById('sectionAudio').textContent = t('sectionAudio');
   document.getElementById('labelCrossfade').textContent = t('labelCrossfade');
-  document.getElementById('descCrossfade').textContent = t('descCrossfade');
+  document.getElementById('descCrossfade').textContent = t('descCrossfade', { seconds: settings.crossfadeDuration });
+  document.getElementById('labelCrossfadeDuration').textContent = t('labelCrossfadeDuration');
+  document.getElementById('descCrossfadeDuration').textContent = t('descCrossfadeDuration');
   document.getElementById('sectionKeyboard').textContent = t('sectionKeyboard');
   document.getElementById('labelKeyPlayPause').textContent = t('labelKeyPlayPause');
   document.getElementById('labelKeyPrev').textContent = t('labelKeyPrev');
@@ -2193,6 +2245,8 @@ function updateLanguage() {
   document.getElementById('saveLyricsBtn').textContent = t('btnSave');
   document.getElementById('searchInput').placeholder = t('placeholderSearch');
   document.getElementById('stopBtn').title = t('stop');
+  sleepTimerSelect.setAttribute('aria-label', t('sleepTimer'));
+  updateSleepTimerTitle();
   
   if (!currentPlaylist) {
     document.getElementById('nowTitle').textContent = t('selectPlaylist');
@@ -2211,6 +2265,7 @@ function loadSettings() {
       settings.colors = { ...settings.customColors };
     }
   }
+  settings.crossfadeDuration = Math.min(6, Math.max(1, Number(settings.crossfadeDuration) || 3));
   applySettings();
   updateLanguage();
 }
@@ -2233,11 +2288,13 @@ function applySettings() {
   }
   
   const visualizer = document.getElementById('visualizer');
-  visualizer.className = 'visualizer ' + settings.visualizerType;
+  if (settings.visualizerType === 'circular') settings.visualizerType = 'centered-bars';
+  renderVisualizer();
   
   document.getElementById('particlesToggle').classList.toggle('active', settings.particles);
   document.getElementById('preMiDToggle').classList.toggle('active', settings.preMiD);
   document.getElementById('crossfadeToggle').classList.toggle('active', settings.crossfade);
+  document.getElementById('crossfadeDurationInput').value = settings.crossfadeDuration;
   document.getElementById('themeSelect').value = settings.theme || 'purple';
   document.getElementById('themeModeSelect').value = settings.themeMode || 'simple';
   document.getElementById('visualizerType').value = settings.visualizerType;
@@ -2261,6 +2318,7 @@ function applySettings() {
   applyHeaderVisibility();
   updateThemeCustomizationUI();
   updateParticleControlsUI();
+  updateCrossfadeControlsUI();
   // playlist layout toggle state
   const playlistToggleEl = document.getElementById('playlistSideToggle');
   if (playlistToggleEl) playlistToggleEl.classList.toggle('active', !!settings.playlistSide);
@@ -2381,6 +2439,8 @@ const nextBtn = document.getElementById('nextBtn');
 const shuffleBtn = document.getElementById('shuffleBtn');
 const repeatOneBtn = document.getElementById('repeatOneBtn');
 const loopListBtn = document.getElementById('loopListBtn');
+const sleepTimerSelect = document.getElementById('sleepTimerSelect');
+const sleepTimerButton = document.getElementById('sleepTimerButton');
 
 /* dom references for playlist and track display */
 const playlistEl = document.getElementById('playlist');
@@ -2937,6 +2997,7 @@ const particleCountInput = document.getElementById('particleCountInput');
 const particleCountValue = document.getElementById('particleCountValue');
 const particleSizeInput = document.getElementById('particleSizeInput');
 const particleSizeValue = document.getElementById('particleSizeValue');
+const crossfadeDurationInput = document.getElementById('crossfadeDurationInput');
 const accentColorPicker = document.getElementById('accentColorPicker');
 const particleColorPicker = document.getElementById('particleColorPicker');
 const bgPrimaryPicker = document.getElementById('bgPrimaryPicker');
@@ -3092,6 +3153,16 @@ if (particleSizeInput && particleSizeValue) {
   });
 }
 
+if (crossfadeDurationInput) {
+  crossfadeDurationInput.addEventListener('input', function() {
+    const val = Math.min(6, Math.max(1, Number(this.value) || 3));
+    this.value = val;
+    settings.crossfadeDuration = val;
+    document.getElementById('descCrossfade').textContent = t('descCrossfade', { seconds: val });
+    saveSettings();
+  });
+}
+
 /* toggle particle effects */
 document.getElementById('particlesToggle').addEventListener('click', function() {
   settings.particles = !settings.particles;
@@ -3125,6 +3196,7 @@ document.getElementById('preMiDToggle').addEventListener('click', function() {
 document.getElementById('crossfadeToggle').addEventListener('click', function() {
   settings.crossfade = !settings.crossfade;
   this.classList.toggle('active', settings.crossfade);
+  updateCrossfadeControlsUI();
   saveSettings();
 });
 
@@ -3147,14 +3219,7 @@ document.getElementById('hideSubtitleToggle').addEventListener('click', function
 /* change audio visualizer style */
 document.getElementById('visualizerType').addEventListener('change', function() {
   settings.visualizerType = this.value;
-  visualizer.className = 'visualizer ' + settings.visualizerType;
-  visualizer.innerHTML = '';
-  const barCount = settings.visualizerType === 'circular' ? 16 : 32;
-  for (let i = 0; i < barCount; i++) {
-    const bar = document.createElement('div');
-    bar.className = 'visualizer-bar';
-    visualizer.appendChild(bar);
-  }
+  renderVisualizer();
   saveSettings();
 });
 
@@ -3162,6 +3227,12 @@ function updateParticleControlsUI() {
   const panel = document.getElementById('particleControls');
   if (!panel) return;
   panel.style.display = settings.particles ? '' : 'none';
+}
+
+function updateCrossfadeControlsUI() {
+  const panel = document.getElementById('crossfadeControls');
+  if (!panel) return;
+  panel.style.display = settings.crossfade ? '' : 'none';
 }
 
 function applyPlaylistLayout() {
@@ -3305,6 +3376,7 @@ document.getElementById('resetSettings').addEventListener('click', async () => {
     particles: false,
     visualizerType: 'bars',
     crossfade: false,
+    crossfadeDuration: 3,
     normalize: false,
     keymap: {
       playpause: ' ',
@@ -3318,12 +3390,6 @@ document.getElementById('resetSettings').addEventListener('click', async () => {
   saveSettings();
   applySettings();
   updateLanguage();
-  visualizer.innerHTML = '';
-  for (let i = 0; i < 32; i++) {
-    const bar = document.createElement('div');
-    bar.className = 'visualizer-bar';
-    visualizer.appendChild(bar);
-  }
 });
 
 /* create floating particle background */
@@ -3343,11 +3409,7 @@ function createParticles() {
   }
 }
 
-for (let i = 0; i < 32; i++) {
-  const bar = document.createElement('div');
-  bar.className = 'visualizer-bar';
-  visualizer.appendChild(bar);
-}
+renderVisualizer();
 
 speedSlider.addEventListener('input', () => {
   const speed = speedSlider.value / 100;
@@ -3386,7 +3448,7 @@ function initAudioContext() {
   
   audioContext = new (window.AudioContext || window.webkitAudioContext)();
   analyser = audioContext.createAnalyser();
-  analyser.fftSize = settings.visualizerType === 'circular' ? 32 : 64;
+  analyser.fftSize = 128;
   
   const source = audioContext.createMediaElementSource(audio);
   source.connect(analyser);
@@ -3404,32 +3466,83 @@ function updateVisualizer() {
   if (!analyser || !isPlaying) {
     const bars = visualizer.querySelectorAll('.visualizer-bar');
     bars.forEach(bar => {
-      if (settings.visualizerType === 'circular') {
-        bar.style.height = '4px';
-      } else {
-        bar.style.height = '4px';
-      }
+      bar.style.height = '4px';
     });
+    const path = visualizer.querySelector('.visualizer-wave path');
+    if (path) path.setAttribute('d', createWavePath(new Uint8Array(32), settings.visualizerType === 'centered-wave'));
     return;
   }
   
   analyser.getByteFrequencyData(dataArray);
+  const visualizerSamples = getCenteredVisualizerSamples(dataArray, 32);
+
+  if (settings.visualizerType === 'wave' || settings.visualizerType === 'centered-wave') {
+    const path = visualizer.querySelector('.visualizer-wave path');
+    if (path) path.setAttribute('d', createWavePath(visualizerSamples, settings.visualizerType === 'centered-wave'));
+    return;
+  }
+
   const bars = visualizer.querySelectorAll('.visualizer-bar');
-  
   bars.forEach((bar, i) => {
-    const value = dataArray[i] || 0;
-    if (settings.visualizerType === 'circular') {
-      const height = (value / 255) * 40 + 4;
-      bar.style.height = height + 'px';
-    } else if (settings.visualizerType === 'wave') {
-      const height = (value / 255) * 60 + 4;
-      bar.style.height = height + 'px';
-      bar.style.borderRadius = '50%';
-    } else {
-      const height = (value / 255) * 70 + 4;
-      bar.style.height = height + 'px';
-    }
+    const value = visualizerSamples[i] || 0;
+    bar.style.height = ((value / 255) * 70 + 4) + 'px';
   });
+}
+
+function getCenteredVisualizerSamples(samples, count) {
+  const centeredSamples = new Uint8Array(count);
+  const center = (count - 1) / 2;
+  for (let i = 0; i < count; i++) {
+    const distanceFromCenter = Math.floor(Math.abs(i - center));
+    centeredSamples[i] = samples[Math.min(distanceFromCenter, samples.length - 1)] || 0;
+  }
+  return centeredSamples;
+}
+
+function createWavePath(samples, centered) {
+  const width = 100;
+  const center = 50;
+  const step = width / (samples.length - 1);
+  const heights = Array.from(samples, sample => (sample / 255) * 44 + 3);
+  let path;
+
+  if (centered) {
+    path = `M 0 ${(center - heights[0]).toFixed(2)}`;
+    for (let i = 1; i < heights.length; i++) {
+      path += ` L ${(i * step).toFixed(2)} ${(center - heights[i]).toFixed(2)}`;
+    }
+    for (let i = heights.length - 1; i >= 0; i--) {
+      path += ` L ${(i * step).toFixed(2)} ${(center + heights[i]).toFixed(2)}`;
+    }
+  } else {
+    path = `M 0 ${(100 - heights[0]).toFixed(2)}`;
+    for (let i = 1; i < heights.length; i++) {
+      path += ` L ${(i * step).toFixed(2)} ${(100 - heights[i]).toFixed(2)}`;
+    }
+    path += ' L 100 100 L 0 100 Z';
+  }
+  return path;
+}
+
+function renderVisualizer() {
+  const mode = settings.visualizerType === 'circular' ? 'centered-bars' : settings.visualizerType;
+  settings.visualizerType = ['bars', 'centered-bars', 'wave', 'centered-wave'].includes(mode)
+    ? mode
+    : 'bars';
+  const isWave = mode === 'wave' || mode === 'centered-wave';
+  visualizer.className = 'visualizer ' + settings.visualizerType;
+  visualizer.innerHTML = '';
+
+  if (isWave) {
+    visualizer.innerHTML = '<svg class="visualizer-wave" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M 0 0 L 100 0"></path></svg>';
+    return;
+  }
+
+  for (let i = 0; i < 32; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'visualizer-bar';
+    visualizer.appendChild(bar);
+  }
 }
 
 /* update media controls and metadata display */
@@ -3501,6 +3614,8 @@ searchInput.addEventListener('input', (e) => {
 });
 
 (async function init(){ 
+  registerManifest();
+  registerServiceWorker();
   await openDB(); 
   playlists = await idbGetAll('playlists'); 
   renderLists(); 
@@ -3830,12 +3945,13 @@ function applyCrossfade() {
   if (!settings.crossfade || !currentPlaylist || currentIndex === -1) return;
   
   const timeLeft = audio.duration - audio.currentTime;
-  if (timeLeft <= 3 && !nextTrackQueued) {
+  const crossfadeDuration = settings.crossfadeDuration || 3;
+  if (timeLeft <= crossfadeDuration && !nextTrackQueued) {
     nextTrackQueued = true;
     
     const startVolume = audio.volume;
     const fadeSteps = 30;
-    const fadeInterval = 3000 / fadeSteps;
+    const fadeInterval = (crossfadeDuration * 1000) / fadeSteps;
     let step = 0;
     
     fadeOutInterval = setInterval(() => {
@@ -3969,6 +4085,79 @@ audio.addEventListener('ended', () => {
   playIndex(n);
 });
 
+function updateSleepTimerTitle() {
+  const isActive = sleepTimerRemaining > 0;
+  const remaining = isActive ? formatTime(Math.ceil(sleepTimerRemaining)) : '';
+  sleepTimerSelect.style.display = isActive ? 'none' : '';
+  sleepTimerButton.style.display = isActive ? 'flex' : 'none';
+  sleepTimerButton.textContent = remaining;
+  sleepTimerSelect.title = t('sleepTimer');
+  sleepTimerButton.title = t('sleepTimer') + (isActive ? ` (${remaining})` : '');
+}
+
+function stopSleepTimer() {
+  if (sleepTimerInterval) {
+    clearInterval(sleepTimerInterval);
+    sleepTimerInterval = null;
+  }
+  sleepTimerRemaining = 0;
+  sleepTimerLastTick = 0;
+  sleepTimerSelect.value = String(sleepTimerDuration);
+  updateSleepTimerTitle();
+}
+
+function pauseSleepTimer() {
+  if (sleepTimerInterval) {
+    const elapsed = (Date.now() - sleepTimerLastTick) / 1000;
+    sleepTimerRemaining = Math.max(0, sleepTimerRemaining - elapsed);
+    clearInterval(sleepTimerInterval);
+    sleepTimerInterval = null;
+  }
+  updateSleepTimerTitle();
+}
+
+function startSleepTimer() {
+  if (sleepTimerRemaining <= 0 && sleepTimerDuration > 0) {
+    sleepTimerRemaining = sleepTimerDuration;
+  }
+  if (sleepTimerRemaining <= 0 || sleepTimerInterval) return;
+  updateSleepTimerTitle();
+  sleepTimerLastTick = Date.now();
+  sleepTimerInterval = setInterval(() => {
+    const elapsed = (Date.now() - sleepTimerLastTick) / 1000;
+    sleepTimerLastTick = Date.now();
+    sleepTimerRemaining -= elapsed;
+    updateSleepTimerTitle();
+
+    if (sleepTimerRemaining <= 0) {
+      stopSleepTimer();
+      audio.pause();
+      isPlaying = false;
+      playBtn.textContent = '▶';
+    }
+  }, 250);
+}
+
+function setSleepTimer(seconds) {
+  pauseSleepTimer();
+  sleepTimerDuration = Math.max(0, Number(seconds) || 0);
+  sleepTimerRemaining = 0;
+  sleepTimerSelect.value = String(sleepTimerDuration);
+  updateSleepTimerTitle();
+  if (isPlaying && !audio.paused) startSleepTimer();
+}
+
+sleepTimerSelect.addEventListener('change', () => {
+  setSleepTimer(sleepTimerSelect.value);
+});
+
+sleepTimerButton.addEventListener('click', () => {
+  stopSleepTimer();
+});
+
+audio.addEventListener('play', startSleepTimer);
+audio.addEventListener('pause', pauseSleepTimer);
+
 /* toggle play/pause */
 function togglePlay() {
   if (!audio.src) return;
@@ -3988,6 +4177,7 @@ playBtn.addEventListener('click', () => togglePlay());
 
 /* stop and clear current playback */
 function clearCurrentPlayback() {
+  stopSleepTimer();
   audio.pause();
   audio.removeAttribute('src');
   audio.load();
@@ -4158,6 +4348,7 @@ deleteListBtn.addEventListener('click', async () => {
   
   currentPlaylist = null;
   currentIndex = -1;
+  stopSleepTimer();
   audio.pause();
   isPlaying = false;
   playBtn.textContent = '▶';
@@ -4245,6 +4436,73 @@ audio.addEventListener('play', syncPreMiDState);
 audio.addEventListener('pause', syncPreMiDState);
 audio.addEventListener('ended', syncPreMiDState);
 audio.addEventListener('loadedmetadata', syncPreMiDState);
+
+function registerManifest() {
+  if (location.protocol === 'file:') return;
+
+  const manifest = {
+    name: 'mejóber',  
+    short_name: 'mejóber',
+    start_url: './index.html',
+    display: 'standalone',
+    background_color: '#0a0e27',
+    theme_color: '#0a0e27',
+    icons: [  
+      { 
+        src: 'https://raw.githubusercontent.com/galzstuff/ybmp-beta/main/ybmp_logo-192x192.png', 
+        sizes: '192x192', 
+        type: 'image/png' 
+      },
+      { 
+        src: 'https://raw.githubusercontent.com/galzstuff/ybmp-beta/main/ybmp_logo-512x512.png', 
+        sizes: '512x512', 
+        type: 'image/png' 
+      }
+    ],
+    screenshots: [
+      {
+        src: 'https://raw.githubusercontent.com/galzstuff/ybmp-beta/main/banner_ybmp.png',
+        sizes: '2560x1440',
+        type: 'image/png',
+        form_factor: 'wide'
+      },
+      {
+        src: 'https://raw.githubusercontent.com/galzstuff/ybmp-beta/main/banner_ybmp.png',
+        sizes: '2560x1440',
+        type: 'image/png',
+        form_factor: 'narrow'
+      }
+    ] 
+  };
+
+  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = URL.createObjectURL(blob);
+  document.head.appendChild(link);
+}
+
+
+function registerServiceWorker() {
+  if (location.protocol === 'file:' || !('serviceWorker' in navigator)) return;
+
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then((registration) => {
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('New update available! Please refresh the page.');
+            }
+          });
+        });
+      })
+      .catch((error) => {
+        console.error('Service Worker registration failed:', error);
+      });
+  });
+}
 </script>
 </body>
 </html>
