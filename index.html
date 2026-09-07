@@ -1798,7 +1798,7 @@ const translations = {
     labelPreMiD: "Discord presence",
     descPreMiD: "share playback status with PreMiD",
     sectionAppearance: "🎨 appearance",
-    verInfo: "you are currently using mejóber v0.8 beta.",
+    verInfo: "you are currently using mejóber v0.8r1.",
     labelParticles: "particle effects",
     descParticles: "floating particles in the background",
     labelVisualizer: "visualizer type",
@@ -1917,7 +1917,7 @@ const translations = {
     labelPreMiD: "presencia de Discord",
     descPreMiD: "compartir el estado de reproducción con PreMiD",
     sectionAppearance: "🎨 apariencia",
-    verInfo: "estás usando mejóber v0.8 beta.",
+    verInfo: "estás usando mejóber v0.8r1.",
     labelParticles: "efectos de partículas",
     descParticles: "partículas flotantes en el fondo",
     labelVisualizer: "tipo de visualizador",
@@ -2280,11 +2280,10 @@ function applySettings() {
   const particlesEl = document.getElementById('particles');
   if (settings.particles) {
     particlesEl.classList.add('active');
-    if (particlesEl.children.length === 0) {
-      createParticles();
-    }
+    createParticles();
   } else {
     particlesEl.classList.remove('active');
+    particlesEl.innerHTML = '';
   }
   
   const visualizer = document.getElementById('visualizer');
@@ -2310,9 +2309,7 @@ function applySettings() {
   document.getElementById('hideSubtitleToggle').classList.toggle('active', settings.hideSubtitle);
 
   if (particleCountInput) particleCountInput.value = settings.particleCount;
-  if (particleCountValue) particleCountValue.textContent = settings.particleCount;
   if (particleSizeInput) particleSizeInput.value = settings.particleSize;
-  if (particleSizeValue) particleSizeValue.textContent = settings.particleSize;
   
   updateColorPickers();
   applyHeaderVisibility();
@@ -3127,12 +3124,12 @@ if (saveThemeSlotBtn) {
   });
 }
 
-if (particleCountInput && particleCountValue) {
+if (particleCountInput) {
   /* adjust particle count */
   particleCountInput.addEventListener('input', function() {
-    const val = Number(this.value) || 0;
+    const val = Math.min(1000, Math.max(0, Number(this.value) || 0));
+    this.value = val;
     settings.particleCount = val;
-    particleCountValue.textContent = val;
     if (settings.particles) {
       createParticles();
     }
@@ -3140,12 +3137,12 @@ if (particleCountInput && particleCountValue) {
   });
 }
 
-if (particleSizeInput && particleSizeValue) {
+if (particleSizeInput) {
   /* adjust particle size */
   particleSizeInput.addEventListener('input', function() {
-    const val = Number(this.value) || 1;
+    const val = Math.min(100, Math.max(1, Number(this.value) || 1));
+    this.value = val;
     settings.particleSize = val;
-    particleSizeValue.textContent = val;
     if (settings.particles) {
       createParticles();
     }
@@ -3170,11 +3167,10 @@ document.getElementById('particlesToggle').addEventListener('click', function() 
   const particlesEl = document.getElementById('particles');
   if (settings.particles) {
     particlesEl.classList.add('active');
-    if (particlesEl.children.length === 0) {
-      createParticles();
-    }
+    createParticles();
   } else {
     particlesEl.classList.remove('active');
+    particlesEl.innerHTML = '';
   }
   updateParticleControlsUI();
   saveSettings();
@@ -3395,14 +3391,19 @@ document.getElementById('resetSettings').addEventListener('click', async () => {
 /* create floating particle background */
 function createParticles() {
   const particlesEl = document.getElementById('particles');
+  if (!particlesEl) return;
+  const count = Math.min(1000, Math.max(0, Number(settings.particleCount) || 0));
+  const size = Math.min(100, Math.max(1, Number(settings.particleSize) || 1));
+  settings.particleCount = count;
+  settings.particleSize = size;
   particlesEl.innerHTML = '';
-  for (let i = 0; i < settings.particleCount; i++) {
+  for (let i = 0; i < count; i++) {
     const particle = document.createElement('div');
     particle.className = 'particle';
     particle.style.left = Math.random() * 100 + '%';
     particle.style.top = Math.random() * 100 + '%';
-    particle.style.width = settings.particleSize + 'px';
-    particle.style.height = settings.particleSize + 'px';
+    particle.style.width = size + 'px';
+    particle.style.height = size + 'px';
     particle.style.animationDelay = Math.random() * 10 + 's';
     particle.style.animationDuration = (Math.random() * 10 + 5) + 's';
     particlesEl.appendChild(particle);
