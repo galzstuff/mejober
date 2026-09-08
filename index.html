@@ -62,6 +62,12 @@
     #particles.active {
       opacity: 1;
     }
+
+    #particles canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
     
     .particle {
       position: absolute;
@@ -1589,7 +1595,7 @@
             💡 click on a shortcut to change it, then press the desired key
           </div>
           <div id="verInfo" style="margin-top: 12px; padding: 12px; background: var(--accent-light); border-radius: 8px; font-size: 12px; color: var(--text-secondary);">
-            you are currently using mejóber v0.8.1.
+            version: 0.8.2
           </div>
         </div>
 
@@ -1818,7 +1824,6 @@ const translations = {
     labelPreMiD: "Discord presence",
     descPreMiD: "share playback status with PreMiD",
     sectionAppearance: "🎨 appearance",
-    verInfo: "you are currently using mejóber v0.8.1.",
     labelParticles: "particle effects",
     descParticles: "floating particles in the background",
     labelVisualizerEnabled: "visualizer",
@@ -1942,7 +1947,6 @@ const translations = {
     labelPreMiD: "presencia de Discord",
     descPreMiD: "compartir el estado de reproducción con PreMiD",
     sectionAppearance: "🎨 apariencia",
-    verInfo: "estás usando mejóber v0.8.1.",
     labelParticles: "efectos de partículas",
     descParticles: "partículas flotantes en el fondo",
     labelVisualizerEnabled: "visualizador",
@@ -2058,7 +2062,7 @@ const translations = {
   }
 };
 
-/* indexeddb configuration and global state */
+/* indexeddb default and overall non-user-modifiable (referring to access through ui settings) configuration and global state */
 const DB_NAME = 'YBMP_DB_v2';
 const DB_VERSION = 2;
 let db;
@@ -2080,8 +2084,13 @@ let audioContext = null;
 let analyser = null;
 let dataArray = null;
 let animationId = null;
+let particleCanvas = null;
+let particleContext = null;
+let particleItems = [];
+let particleAnimationId = null;
 let customThemeStyleEl = null;
 
+/* default settings */
 let settings = {
   language: 'en',
   preMiD: true,
@@ -2319,6 +2328,7 @@ function applySettings() {
     createParticles();
   } else {
     particlesEl.classList.remove('active');
+    stopParticles();
     particlesEl.innerHTML = '';
   }
   
@@ -3221,6 +3231,7 @@ document.getElementById('particlesToggle').addEventListener('click', function() 
     createParticles();
   } else {
     particlesEl.classList.remove('active');
+    stopParticles();
     particlesEl.innerHTML = '';
   }
   updateParticleControlsUI();
@@ -3472,19 +3483,60 @@ function createParticles() {
   const size = Math.min(100, Math.max(1, Number(settings.particleSize) || 1));
   settings.particleCount = count;
   settings.particleSize = size;
-  particlesEl.innerHTML = '';
+  stopParticles();
+  particlesEl.innerHTML = '<canvas aria-hidden="true"></canvas>';
+  particleCanvas = particlesEl.querySelector('canvas');
+  particleContext = particleCanvas.getContext('2d');
+  resizeParticleCanvas();
+  const particleColor = getComputedStyle(document.documentElement).getPropertyValue('--particle-color').trim();
   for (let i = 0; i < count; i++) {
-    const particle = document.createElement('div');
-    particle.className = 'particle';
-    particle.style.left = Math.random() * 100 + '%';
-    particle.style.top = Math.random() * 100 + '%';
-    particle.style.width = size + 'px';
-    particle.style.height = size + 'px';
-    particle.style.animationDelay = Math.random() * 10 + 's';
-    particle.style.animationDuration = (Math.random() * 10 + 5) + 's';
-    particlesEl.appendChild(particle);
+    particleItems.push({
+      x: Math.random(),
+      y: Math.random(),
+      vx: (Math.random() - 0.5) * 0.00003,
+      vy: -(0.00002 + Math.random() * 0.00004),
+      size,
+      color: particleColor
+    });
   }
+  if (settings.particles) particleAnimationId = requestAnimationFrame(updateParticles);
 }
+
+function resizeParticleCanvas() {
+  if (!particleCanvas) return;
+  const bounds = particleCanvas.getBoundingClientRect();
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  particleCanvas.width = Math.max(1, Math.floor(bounds.width * pixelRatio));
+  particleCanvas.height = Math.max(1, Math.floor(bounds.height * pixelRatio));
+  particleContext?.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+}
+
+function updateParticles(timestamp) {
+  particleAnimationId = null;
+  if (!settings.particles || !particleCanvas || !particleContext) return;
+  const bounds = particleCanvas.getBoundingClientRect();
+  particleContext.clearRect(0, 0, bounds.width, bounds.height);
+  particleItems.forEach((particle) => {
+    particle.x = (particle.x + particle.vx + 1) % 1;
+    particle.y = (particle.y + particle.vy + 1) % 1;
+    particleContext.fillStyle = particle.color;
+    particleContext.globalAlpha = 0.6;
+    particleContext.beginPath();
+    particleContext.arc(particle.x * bounds.width, particle.y * bounds.height, particle.size / 2, 0, Math.PI * 2);
+    particleContext.fill();
+  });
+  particleAnimationId = requestAnimationFrame(updateParticles);
+}
+
+function stopParticles() {
+  if (particleAnimationId !== null) cancelAnimationFrame(particleAnimationId);
+  particleAnimationId = null;
+  particleItems = [];
+  particleCanvas = null;
+  particleContext = null;
+}
+
+window.addEventListener('resize', resizeParticleCanvas);
 
 renderVisualizer();
 
@@ -3533,17 +3585,13 @@ function initAudioContext() {
   
   const bufferLength = analyser.frequencyBinCount;
   dataArray = new Uint8Array(bufferLength);
-  
+
   updateVisualizer();
 }
 
 function updateVisualizer() {
-  if (!settings.visualizer) {
-    animationId = null;
-    return;
-  }
   animationId = requestAnimationFrame(updateVisualizer);
-  
+
   if (!analyser || !isPlaying) {
     const bars = visualizer.querySelectorAll('.visualizer-bar');
     bars.forEach(bar => {
@@ -3955,6 +4003,7 @@ function renderPlaylist() {
       
       if (wasCurrent) {
         audio.pause();
+        revokeAudioObjectUrls();
         audio.currentTime = 0;
         audio.removeAttribute('src');
         audio.load();
@@ -4022,6 +4071,12 @@ function renderPlaylist() {
   });
 }
 
+function updatePlaylistSelection() {
+  playlistEl.querySelectorAll('.track').forEach((track, index) => {
+    track.classList.toggle('active', index === currentIndex);
+  });
+}
+
 /* track reordering via drag and drop */
 let fadeOutInterval = null;
 let nextTrackQueued = false;
@@ -4075,10 +4130,7 @@ async function playIndex(i) {
 
   audio.pause();
   
-  if (currentFileUrls[fileRef.id]) {
-    URL.revokeObjectURL(currentFileUrls[fileRef.id]);
-    delete currentFileUrls[fileRef.id];
-  }
+  revokeAudioObjectUrls();
   
   currentFileUrls[fileRef.id] = URL.createObjectURL(fileRecord.blob);
   audio.src = currentFileUrls[fileRef.id];
@@ -4092,7 +4144,7 @@ async function playIndex(i) {
   currentIndex = i;
   nowTitle.textContent = fileRef.name;
   nowMeta.textContent = fileRecord.type || fileRecord.blob.type || 'unknown';
-  renderPlaylist();
+  updatePlaylistSelection();
   renderLyrics();
   
   audio.volume = volumeSlider.value / 100;
@@ -4265,6 +4317,7 @@ playBtn.addEventListener('click', () => togglePlay());
 function clearCurrentPlayback() {
   stopSleepTimer();
   audio.pause();
+  revokeAudioObjectUrls();
   audio.removeAttribute('src');
   audio.load();
   audio.currentTime = 0;
@@ -4286,6 +4339,13 @@ function clearCurrentPlayback() {
   renderLyrics();
   renderLists();
   renderPlaylist();
+}
+
+function revokeAudioObjectUrls() {
+  for (const key in currentFileUrls) {
+    try { URL.revokeObjectURL(currentFileUrls[key]); } catch (e) {}
+    delete currentFileUrls[key];
+  }
 }
 
 /* stop button listener */
@@ -4491,6 +4551,7 @@ const preMiDStateKeys = [
   'ybmp_current_time',
   'ybmp_duration'
 ];
+let lastPreMiDSync = 0;
 
 /* clear premid state from localstorage */
 function clearPreMiDState() {
@@ -4501,8 +4562,11 @@ function clearPreMiDState() {
 }
 
 /* sync playback state to localstorage for premid bridge */
-function syncPreMiDState() {
+function syncPreMiDState(force = false) {
   if (!settings.preMiD) return;
+  const now = Date.now();
+  if (!force && now - lastPreMiDSync < 1000) return;
+  lastPreMiDSync = now;
   try {
     const title = (currentIndex >= 0 && currentPlaylist?.files?.[currentIndex])
       ? currentPlaylist.files[currentIndex].name
@@ -4518,10 +4582,10 @@ function syncPreMiDState() {
 
 /* sync premid state on playback events */
 audio.addEventListener('timeupdate', syncPreMiDState);
-audio.addEventListener('play', syncPreMiDState);
-audio.addEventListener('pause', syncPreMiDState);
-audio.addEventListener('ended', syncPreMiDState);
-audio.addEventListener('loadedmetadata', syncPreMiDState);
+audio.addEventListener('play', () => syncPreMiDState(true));
+audio.addEventListener('pause', () => syncPreMiDState(true));
+audio.addEventListener('ended', () => syncPreMiDState(true));
+audio.addEventListener('loadedmetadata', () => syncPreMiDState(true));
 
 function registerManifest() {
   if (location.protocol === 'file:') return;
