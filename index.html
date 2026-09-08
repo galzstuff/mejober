@@ -1341,6 +1341,14 @@
 
           <div class="setting-item">
             <div>
+              <div class="setting-label" id="labelVisualizerEnabled">visualizer</div>
+              <div class="setting-description" id="descVisualizerEnabled">show the audio visualizer</div>
+            </div>
+            <div class="toggle-switch" id="visualizerToggle"></div>
+          </div>
+
+          <div class="setting-item" id="visualizerControls">
+            <div>
               <div class="setting-label" id="labelVisualizer">visualizer type</div>
               <div class="setting-description" id="descVisualizer">audio visualizer style</div>
             </div>
@@ -1581,7 +1589,7 @@
             💡 click on a shortcut to change it, then press the desired key
           </div>
           <div id="verInfo" style="margin-top: 12px; padding: 12px; background: var(--accent-light); border-radius: 8px; font-size: 12px; color: var(--text-secondary);">
-            you are currently using mejóber v0.8.
+            you are currently using mejóber v0.8.1.
           </div>
         </div>
 
@@ -1627,6 +1635,18 @@
         <div style="display:flex; justify-content:flex-end; gap:12px;">
           <button class="btn btn-secondary btn-small" id="confirmCancelBtn">Cancel</button>
           <button class="btn btn-primary btn-small" id="confirmConfirmBtn">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="appUpdateModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title" id="appUpdateModalTitle">update available</h2>
+        </div>
+        <div style="padding: 0 0 24px; color: var(--text-secondary); font-size: 14px;" id="appUpdateModalMessage">a new version of mejóber is ready. refresh the page to use it.</div>
+        <div style="display:flex; justify-content:flex-end; gap:12px;">
+          <button class="btn btn-primary btn-small" id="appUpdateRefreshBtn">refresh page</button>
         </div>
       </div>
     </div>
@@ -1798,9 +1818,11 @@ const translations = {
     labelPreMiD: "Discord presence",
     descPreMiD: "share playback status with PreMiD",
     sectionAppearance: "🎨 appearance",
-    verInfo: "you are currently using mejóber v0.8r1.",
+    verInfo: "you are currently using mejóber v0.8.1.",
     labelParticles: "particle effects",
     descParticles: "floating particles in the background",
+    labelVisualizerEnabled: "visualizer",
+    descVisualizerEnabled: "show the audio visualizer",
     labelVisualizer: "visualizer type",
     descVisualizer: "audio visualizer style",
     visualizerBars: "bars",
@@ -1905,7 +1927,10 @@ const translations = {
     keySpace: "space",
     pressKey: "press a key...",
     stop: "stop",
-    sleepTimer: "sleep timer"
+    sleepTimer: "sleep timer",
+    appUpdateTitle: "update available",
+    appUpdateMessage: "a new version of mejóber is ready. refresh the page to use it.",
+    appUpdateRefresh: "refresh page"
   },
   es: {
     appTitle: "mejóber",
@@ -1917,9 +1942,11 @@ const translations = {
     labelPreMiD: "presencia de Discord",
     descPreMiD: "compartir el estado de reproducción con PreMiD",
     sectionAppearance: "🎨 apariencia",
-    verInfo: "estás usando mejóber v0.8r1.",
+    verInfo: "estás usando mejóber v0.8.1.",
     labelParticles: "efectos de partículas",
     descParticles: "partículas flotantes en el fondo",
+    labelVisualizerEnabled: "visualizador",
+    descVisualizerEnabled: "mostrar el visualizador de audio",
     labelVisualizer: "tipo de visualizador",
     descVisualizer: "estilo del visualizador de audio",
     visualizerBars: "barras",
@@ -2024,7 +2051,10 @@ const translations = {
     keySpace: "espacio",
     pressKey: "presiona una tecla...",
     stop: "detener",
-    sleepTimer: "temporizador de apagado"
+    sleepTimer: "temporizador de apagado",
+    appUpdateTitle: "actualización disponible",
+    appUpdateMessage: "hay una nueva versión de mejóber. actualiza la página para usarla.",
+    appUpdateRefresh: "actualizar página"
   }
 };
 
@@ -2056,6 +2086,7 @@ let settings = {
   language: 'en',
   preMiD: true,
   particles: false,
+  visualizer: true,
   visualizerType: 'bars',
   crossfade: false,
   crossfadeDuration: 3,
@@ -2159,6 +2190,8 @@ function updateLanguage() {
   document.getElementById('sectionAppearance').textContent = t('sectionAppearance');
   document.getElementById('labelParticles').textContent = t('labelParticles');
   document.getElementById('descParticles').textContent = t('descParticles');
+  document.getElementById('labelVisualizerEnabled').textContent = t('labelVisualizerEnabled');
+  document.getElementById('descVisualizerEnabled').textContent = t('descVisualizerEnabled');
   document.getElementById('labelVisualizer').textContent = t('labelVisualizer');
   document.getElementById('descVisualizer').textContent = t('descVisualizer');
   
@@ -2246,6 +2279,9 @@ function updateLanguage() {
   document.getElementById('searchInput').placeholder = t('placeholderSearch');
   document.getElementById('stopBtn').title = t('stop');
   sleepTimerSelect.setAttribute('aria-label', t('sleepTimer'));
+  document.getElementById('appUpdateModalTitle').textContent = t('appUpdateTitle');
+  document.getElementById('appUpdateModalMessage').textContent = t('appUpdateMessage');
+  document.getElementById('appUpdateRefreshBtn').textContent = t('appUpdateRefresh');
   updateSleepTimerTitle();
   
   if (!currentPlaylist) {
@@ -2286,17 +2322,18 @@ function applySettings() {
     particlesEl.innerHTML = '';
   }
   
-  const visualizer = document.getElementById('visualizer');
   if (settings.visualizerType === 'circular') settings.visualizerType = 'centered-bars';
   renderVisualizer();
   
   document.getElementById('particlesToggle').classList.toggle('active', settings.particles);
+  document.getElementById('visualizerToggle').classList.toggle('active', settings.visualizer);
   document.getElementById('preMiDToggle').classList.toggle('active', settings.preMiD);
   document.getElementById('crossfadeToggle').classList.toggle('active', settings.crossfade);
   document.getElementById('crossfadeDurationInput').value = settings.crossfadeDuration;
   document.getElementById('themeSelect').value = settings.theme || 'purple';
   document.getElementById('themeModeSelect').value = settings.themeMode || 'simple';
   document.getElementById('visualizerType').value = settings.visualizerType;
+  updateVisualizerControlsUI();
   document.getElementById('languageSelect').value = settings.language;
   const advancedCssEditorEl = document.getElementById('advancedCssEditor');
   if (settings.themeMode === 'advanced' && !settings.customCss) {
@@ -2526,6 +2563,20 @@ const confirmModalMessage = document.getElementById('confirmModalMessage');
 const confirmConfirmBtn = document.getElementById('confirmConfirmBtn');
 const confirmCancelBtn = document.getElementById('confirmCancelBtn');
 const closeConfirmModal = document.getElementById('closeConfirmModal');
+const appUpdateModal = document.getElementById('appUpdateModal');
+const appUpdateRefreshBtn = document.getElementById('appUpdateRefreshBtn');
+
+let appUpdateModalShown = false;
+
+function showAppUpdateModal() {
+  if (appUpdateModalShown || !appUpdateModal) return;
+  appUpdateModalShown = true;
+  appUpdateModal.classList.add('show');
+}
+
+appUpdateRefreshBtn.addEventListener('click', () => {
+  window.location.reload();
+});
 
 const renameModal = document.getElementById('renameModal');
 const renameModalTitle = document.getElementById('renameModalTitle');
@@ -3213,11 +3264,35 @@ document.getElementById('hideSubtitleToggle').addEventListener('click', function
 });
 
 /* change audio visualizer style */
+document.getElementById('visualizerToggle').addEventListener('click', function() {
+  settings.visualizer = !settings.visualizer;
+  this.classList.toggle('active', settings.visualizer);
+  updateVisualizerControlsUI();
+  if (settings.visualizer) {
+    renderVisualizer();
+    if (analyser && animationId === null) updateVisualizer();
+  } else {
+    if (animationId !== null) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+    visualizer.innerHTML = '';
+  }
+  saveSettings();
+});
+
 document.getElementById('visualizerType').addEventListener('change', function() {
   settings.visualizerType = this.value;
   renderVisualizer();
   saveSettings();
 });
+
+function updateVisualizerControlsUI() {
+  const controls = document.getElementById('visualizerControls');
+  const visualizerContainer = document.querySelector('.visualizer-container');
+  if (controls) controls.style.display = settings.visualizer ? '' : 'none';
+  if (visualizerContainer) visualizerContainer.style.display = settings.visualizer ? '' : 'none';
+}
 
 function updateParticleControlsUI() {
   const panel = document.getElementById('particleControls');
@@ -3370,6 +3445,7 @@ document.getElementById('resetSettings').addEventListener('click', async () => {
     language: 'en',
     darkMode: true,
     particles: false,
+    visualizer: true,
     visualizerType: 'bars',
     crossfade: false,
     crossfadeDuration: 3,
@@ -3462,6 +3538,10 @@ function initAudioContext() {
 }
 
 function updateVisualizer() {
+  if (!settings.visualizer) {
+    animationId = null;
+    return;
+  }
   animationId = requestAnimationFrame(updateVisualizer);
   
   if (!analyser || !isPlaying) {
@@ -3526,6 +3606,11 @@ function createWavePath(samples, centered) {
 }
 
 function renderVisualizer() {
+  if (!settings.visualizer) {
+    visualizer.innerHTML = '';
+    updateVisualizerControlsUI();
+    return;
+  }
   const mode = settings.visualizerType === 'circular' ? 'centered-bars' : settings.visualizerType;
   settings.visualizerType = ['bars', 'centered-bars', 'wave', 'centered-wave'].includes(mode)
     ? mode
@@ -4494,7 +4579,7 @@ function registerServiceWorker() {
           const newWorker = registration.installing;
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('New update available! Please refresh the page.');
+              showAppUpdateModal();
             }
           });
         });
