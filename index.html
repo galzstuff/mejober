@@ -2310,6 +2310,7 @@ function loadSettings() {
       settings.colors = { ...settings.customColors };
     }
   }
+  syncSettingsColorsFromCustomCss();
   settings.crossfadeDuration = Math.min(6, Math.max(1, Number(settings.crossfadeDuration) || 3));
   applySettings();
   updateLanguage();
@@ -2322,6 +2323,16 @@ function saveSettings() {
 
 /* apply settings to the ui (particles, theme, visualizer, etc) */
 function applySettings() {
+  const advancedCssEditorEl = document.getElementById('advancedCssEditor');
+  if (settings.themeMode === 'advanced' && !settings.customCss) {
+    settings.customCss = buildAdvancedCssTemplate();
+  }
+  if (advancedCssEditorEl) {
+    advancedCssEditorEl.value = settings.customCss || '';
+  }
+
+  applyThemeColors();
+
   const particlesEl = document.getElementById('particles');
   if (settings.particles) {
     particlesEl.classList.add('active');
@@ -2345,13 +2356,6 @@ function applySettings() {
   document.getElementById('visualizerType').value = settings.visualizerType;
   updateVisualizerControlsUI();
   document.getElementById('languageSelect').value = settings.language;
-  const advancedCssEditorEl = document.getElementById('advancedCssEditor');
-  if (settings.themeMode === 'advanced' && !settings.customCss) {
-    settings.customCss = buildAdvancedCssTemplate();
-  }
-  if (advancedCssEditorEl) {
-    advancedCssEditorEl.value = settings.customCss || '';
-  }
   document.getElementById('hideTitleToggle').classList.toggle('active', settings.hideTitle);
   document.getElementById('hideSubtitleToggle').classList.toggle('active', settings.hideSubtitle);
 
@@ -2367,8 +2371,6 @@ function applySettings() {
   const playlistToggleEl = document.getElementById('playlistSideToggle');
   if (playlistToggleEl) playlistToggleEl.classList.toggle('active', !!settings.playlistSide);
   applyPlaylistLayout();
-
-  applyThemeColors();
   
   /* update keyboard shortcut displays */
   document.getElementById('key-playpause').value = settings.keymap.playpause === ' ' ? t('keySpace') : settings.keymap.playpause;
@@ -2925,7 +2927,41 @@ function updateThemeCustomizationUI() {
   if (advancedThemeControls) advancedThemeControls.style.display = isCustom && useAdvanced ? '' : 'none';
 }
 
+function syncSettingsColorsFromCustomCss() {
+  if (!settings.customCss) return;
+  const cssMap = {
+    '--accent': 'accent',
+    '--particle-color': 'particleColor',
+    '--bg-primary': 'bgPrimary',
+    '--bg-secondary': 'bgSecondary',
+    '--bg-tertiary': 'bgTertiary',
+    '--text-primary': 'textPrimary',
+    '--text-secondary': 'textSecondary'
+  };
+  settings.colors = { ...settings.colors };
+  Object.entries(cssMap).forEach(([varName, key]) => {
+    const match = settings.customCss.match(new RegExp(`${varName}\\s*:\\s*([^;]+);`, 'i'));
+    if (match && match[1]) {
+      settings.colors[key] = match[1].trim();
+    }
+  });
+}
+
 /* apply css color variables based on current settings */
+function syncParticleColorsFromTheme() {
+  const root = document.documentElement;
+  const particleColor = getComputedStyle(root)
+    .getPropertyValue('--particle-color')
+    .trim() || getComputedStyle(root)
+    .getPropertyValue('--accent')
+    .trim() || settings.colors?.particleColor || settings.colors?.accent || '#6366f1';
+
+  if (!Array.isArray(particleItems)) return;
+  particleItems.forEach(particle => {
+    particle.color = particleColor;
+  });
+}
+
 function applyThemeColors() {
   const colors = settings.theme && themePresets[settings.theme]
     ? themePresets[settings.theme]
@@ -2941,15 +2977,17 @@ function applyThemeColors() {
   }
   if (settings.theme === 'custom' && settings.themeMode === 'advanced') {
     if (!settings.customCss) settings.customCss = buildAdvancedCssTemplate();
+    syncSettingsColorsFromCustomCss();
     customThemeStyleEl.textContent = settings.customCss || '';
     const root = document.documentElement;
     ['--accent', '--accent-end', '--accent-hover', '--accent-light', '--accent-shadow', '--accent-overlay', '--particle-color', '--bg-primary', '--bg-secondary', '--bg-tertiary', '--text-primary', '--text-secondary'].forEach(name => {
       root.style.removeProperty(name);
     });
+    syncParticleColorsFromTheme();
+    return;
   } else {
     customThemeStyleEl.textContent = '';
   }
-  if (settings.theme === 'custom' && settings.themeMode === 'advanced') return;
   const root = document.documentElement;
   root.style.setProperty('--accent', colors.accent);
   root.style.setProperty('--accent-end', colors.accent);
@@ -2963,6 +3001,8 @@ function applyThemeColors() {
   root.style.setProperty('--bg-tertiary', colors.bgTertiary);
   root.style.setProperty('--text-primary', colors.textPrimary);
   root.style.setProperty('--text-secondary', colors.textSecondary);
+
+  syncParticleColorsFromTheme();
 }
 
 /* load theme slot options from indexeddb */
@@ -3488,7 +3528,10 @@ function createParticles() {
   particleCanvas = particlesEl.querySelector('canvas');
   particleContext = particleCanvas.getContext('2d');
   resizeParticleCanvas();
-  const particleColor = getComputedStyle(document.documentElement).getPropertyValue('--particle-color').trim();
+  const root = document.documentElement;
+  const particleColor = getComputedStyle(root)
+    .getPropertyValue('--particle-color')
+    .trim() || settings.colors?.particleColor || settings.colors?.accent || '#6366f1';
   for (let i = 0; i < count; i++) {
     particleItems.push({
       x: Math.random(),
